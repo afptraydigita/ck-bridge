@@ -1,0 +1,1 @@
+{"ok":false,"code":400,"err":"meta._ck_highlights bukan dari tipe string.","json":{"code":"rest_invalid_type","message":"meta._ck_highlights bukan dari tipe string.","data":{"status":400},"additional_data":[{"param":"meta._ck_highlights"}]},"id":"ckagen-uji-f-draf","qid":"ckagen-uji-13sep-f1","detik":0.67,"waktu":"2026-09-13T03:29:44+00:00"}
