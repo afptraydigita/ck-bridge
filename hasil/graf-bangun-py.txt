@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+"""
+graf-bangun — pembangun graf pengetahuan _Cowork (Graphify) di kontainer Cowork.
+
+Dijalankan oleh tugas terjadwal. Prasyarat yang disiapkan sesi sebelum memanggil:
+  ./sumber/         salinan berkas sumber _Cowork (daftar: graf-daftar-sumber.json)
+  ./keadaan/        (opsional) graphify-out sebelumnya: graph.json, manifest.json,
+                    .graphify_analysis.json, .graphify_labels.json(.sig), GRAPH_REPORT.md
+Keluaran:
+  ./sumber/graphify-out/   hasil bangun (graph.json, GRAPH_REPORT.md, manifest.json, label)
+  ./laporan.json           ringkasan untuk dilaporkan + daftar berkas yang harus dikirim balik
+
+Pemakaian:
+  python3 graf-bangun.py            # update bila ada keadaan lama, extract penuh bila tidak
+  python3 graf-bangun.py --penuh    # paksa extract penuh (semantik, backend claude-cli)
+  python3 graf-bangun.py --tanpa-llm  # hanya `graphify update` (kode saja, gratis)
+"""
+import json, os, shutil, subprocess, sys, time, pathlib
+
+AKAR = pathlib.Path(__file__).resolve().parent
+SUMBER = AKAR / "sumber"
+KEADAAN = AKAR / "keadaan"
+OUT = SUMBER / "graphify-out"
+LAPORAN = AKAR / "laporan.json"
+STATE_FILES = ["graph.json", "manifest.json", ".graphify_analysis.json", ".graphify_labels.json",
+               ".graphify_labels.json.sig", ".graphify_semantic_marker", ".graphify_root", "GRAPH_REPORT.md", "cost.json"]
+
+def jalankan(cmd, timeout=3600):
+    t0 = time.time()
+    p = subprocess.run(cmd, cwd=str(AKAR), capture_output=True, text=True, timeout=timeout)
+    return p.returncode, (p.stdout + "\n" + p.stderr)[-6000:], round(time.time() - t0, 1)
+
+def statistik(path):
+    try:
+        g = json.load(open(path, encoding="utf-8"))
+        n = g.get("nodes", []); e = g.get("links", g.get("edges", []))
+        kom = {str(x.get("community")) for x in n if x.get("community") is not None}
+        berkas = {x.get("source_file") for x in n if x.get("source_file")}
+        return {"simpul": len(n), "sisi": len(e), "komunitas": len(kom), "berkas": len(berkas)}
+    except Exception as ex:
+        return {"err": str(ex)}
+
+def main():
+    arg = set(sys.argv[1:])
+    if not SUMBER.is_dir() or not any(SUMBER.rglob("*.md")):
+        print("sumber/ kosong — stage dulu berkas _Cowork", file=sys.stderr); sys.exit(2)
+    os.environ.setdefault("GRAPHIFY_CLAUDE_CLI_MODEL", "sonnet")
+    # pulihkan keadaan lama supaya update bersifat inkremental
+    OUT.mkdir(parents=True, exist_ok=True)
+    ada_lama = False
+    if KEADAAN.is_dir():
+        for f in STATE_FILES:
+            s = KEADAAN / f
+            if s.is_file():
+                shutil.copy2(s, OUT / f); ada_lama = ada_lama or f == "graph.json"
+    sebelum = statistik(OUT / "graph.json") if ada_lama else None
+
+    langkah = []
+    if "--penuh" in arg or not ada_lama:
+        rc, log, dt = jalankan(["graphify", "extract", "./sumber", "--backend", "claude-cli",
+                                "--max-concurrency", "1", "--api-timeout", "900"] + (["--force"] if "--penuh" in arg else []))
+        langkah.append({"perintah": "extract (semantik, claude-cli)", "rc": rc, "detik": dt, "ekor": log[-1500:]})
+    else:
+        rc, log, dt = jalankan(["graphify", "update", "./sumber"])
+        langkah.append({"perintah": "update (tanpa LLM)", "rc": rc, "detik": dt, "ekor": log[-1500:]})
+        if "--tanpa-llm" not in arg:
+            rc2, log2, dt2 = jalankan(["graphify", "check-update", "./sumber"])
+            perlu = ("needs_update" in log2 and "true" in log2.lower()) or "pending" in log2.lower()
+            langkah.append({"perintah": "check-update", "rc": rc2, "detik": dt2, "perlu_semantik": perlu, "ekor": log2[-800:]})
+            if perlu:
+                rc3, log3, dt3 = jalankan(["graphify", "extract", "./sumber", "--backend", "claude-cli",
+                                            "--max-concurrency", "1", "--api-timeout", "900"])
+                langkah.append({"perintah": "extract semantik (berkas berubah)", "rc": rc3, "detik": dt3, "ekor": log3[-1500:]})
+    sesudah = statistik(OUT / "graph.json")
+    ok = (OUT / "graph.json").is_file() and "err" not in sesudah and sesudah.get("simpul", 0) > 0
+    # penjaga: jangan kirim graf yang menyusut drastis
+    if ok and sebelum and sebelum.get("simpul", 0) > 50 and sesudah["simpul"] < 0.6 * sebelum["simpul"]:
+        ok = False; langkah.append({"peringatan": f"graf menyusut {sebelum['simpul']}→{sesudah['simpul']} simpul; hasil TIDAK dikirim"})
+    kirim = [f for f in STATE_FILES if (OUT / f).is_file()]
+    lap = {"ok": ok, "waktu": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "sebelum": sebelum, "sesudah": sesudah,
+           "langkah": langkah, "kirim_balik": [str(OUT / f) for f in kirim] if ok else []}
+    json.dump(lap, open(LAPORAN, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    print(json.dumps({k: lap[k] for k in ("ok", "sebelum", "sesudah")}, ensure_ascii=False))
+    sys.exit(0 if ok else 1)
+
+if __name__ == "__main__":
+    main()
