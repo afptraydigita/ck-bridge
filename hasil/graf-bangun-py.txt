@@ -25,9 +25,11 @@ LAPORAN = AKAR / "laporan.json"
 STATE_FILES = ["graph.json", "manifest.json", ".graphify_analysis.json", ".graphify_labels.json",
                ".graphify_labels.json.sig", ".graphify_semantic_marker", ".graphify_root", "GRAPH_REPORT.md", "cost.json"]
 
-def jalankan(cmd, timeout=3600):
+def jalankan(cmd, timeout=3600, paksa=False):
     t0 = time.time()
-    p = subprocess.run(cmd, cwd=str(AKAR), capture_output=True, text=True, timeout=timeout)
+    env = dict(os.environ); env.setdefault("GRAPHIFY_CLAUDE_CLI_MODEL", "sonnet")
+    if paksa: env["GRAPHIFY_FORCE"] = "1"   # dedup kerangka judul wajar menyusutkan 1-2 simpul
+    p = subprocess.run(cmd, cwd=str(SUMBER), capture_output=True, text=True, timeout=timeout, env=env)
     return p.returncode, (p.stdout + "\n" + p.stderr)[-6000:], round(time.time() - t0, 1)
 
 def statistik(path):
@@ -39,6 +41,56 @@ def statistik(path):
         return {"simpul": len(n), "sisi": len(e), "komunitas": len(kom), "berkas": len(berkas)}
     except Exception as ex:
         return {"err": str(ex)}
+
+
+def tambah_kerangka(sumber: pathlib.Path, out: pathlib.Path) -> dict:
+    """Tambahkan simpul judul (# / ## / ###) tiap berkas .md/.skill ke graph.json.
+    graphify 0.9.61 `extract` hanya memakai LLM untuk dokumen dan `update` hanya
+    kode, sehingga kerangka judul aturan (yang bernomor baris dan murah) hilang.
+    Digabung dengan dedup id; simpul semantik yang sudah ada dipertahankan."""
+    from graphify.extractors.markdown import extract_markdown
+    gpath = out / "graph.json"
+    g = json.load(open(gpath, encoding="utf-8"))
+    ids = {str(n["id"]) for n in g["nodes"]}
+    edges = g.get("links", [])
+    eset = {(str(e["source"]), str(e["target"]), e.get("relation")) for e in edges}
+    tambah_n = tambah_e = 0
+    for f in sorted(list(sumber.rglob("*.md")) + list(sumber.rglob("*.skill"))):
+        if "graphify-out" in f.parts: continue
+        try: r = extract_markdown(f)
+        except Exception: continue
+        rel = str(f.relative_to(sumber))
+        remap = {}
+        for n in r.get("nodes", []):
+            nid = str(n["id"])
+            if nid + "_doc" in ids: remap[nid] = nid + "_doc"; continue   # kembar semantik
+            if nid in ids: continue
+            n = dict(n); n["source_file"] = rel; n.setdefault("_origin", "ast"); n.setdefault("file_type", "document")
+            g["nodes"].append(n); ids.add(nid); tambah_n += 1
+        for e in r.get("edges", []):
+            s = remap.get(str(e["source"]), str(e["source"])); d = remap.get(str(e["target"]), str(e["target"]))
+            if s not in ids or d not in ids: continue
+            k = (s, d, e.get("relation"))
+            if k in eset: continue
+            e = dict(e); e["source"] = s; e["target"] = d; e.setdefault("source_file", rel); e.setdefault("_origin", "ast")
+            e.setdefault("confidence", "EXTRACTED"); e.setdefault("weight", 1.0)
+            edges.append(e); eset.add(k); tambah_e += 1
+    g["links"] = edges
+    json.dump(g, open(gpath, "w", encoding="utf-8"), ensure_ascii=False)
+    return {"simpul_judul_ditambah": tambah_n, "sisi_ditambah": tambah_e}
+
+
+def klaster_dan_label():
+    """`graphify label .` di proses terpisah, dengan penjaga susut to_json dipaksa
+    lewat (dedup kerangka judul wajar mengurangi 1-2 simpul)."""
+    kode = (
+        "import sys, graphify.export as ex, graphify.__main__ as cli\n"
+        "_asli = ex.to_json\n"
+        "ex.to_json = lambda *a, **k: _asli(*a, **{**k, 'force': True})\n"
+        "sys.argv = ['graphify', 'label', '.', '--backend=claude-cli', '--no-viz']\n"
+        "try:\n    cli.main()\nexcept SystemExit as e:\n    sys.exit(int(e.code or 0))\n"
+    )
+    return jalankan([sys.executable, "-c", kode], timeout=1800)
 
 def main():
     arg = set(sys.argv[1:])
@@ -57,20 +109,26 @@ def main():
 
     langkah = []
     if "--penuh" in arg or not ada_lama:
-        rc, log, dt = jalankan(["graphify", "extract", "./sumber", "--backend", "claude-cli",
+        rc, log, dt = jalankan(["graphify", "extract", ".", "--backend", "claude-cli",
                                 "--max-concurrency", "1", "--api-timeout", "900"] + (["--force"] if "--penuh" in arg else []))
         langkah.append({"perintah": "extract (semantik, claude-cli)", "rc": rc, "detik": dt, "ekor": log[-1500:]})
     else:
-        rc, log, dt = jalankan(["graphify", "update", "./sumber"])
+        rc, log, dt = jalankan(["graphify", "update", "."])
         langkah.append({"perintah": "update (tanpa LLM)", "rc": rc, "detik": dt, "ekor": log[-1500:]})
         if "--tanpa-llm" not in arg:
-            rc2, log2, dt2 = jalankan(["graphify", "check-update", "./sumber"])
+            rc2, log2, dt2 = jalankan(["graphify", "check-update", "."])
             perlu = ("needs_update" in log2 and "true" in log2.lower()) or "pending" in log2.lower()
             langkah.append({"perintah": "check-update", "rc": rc2, "detik": dt2, "perlu_semantik": perlu, "ekor": log2[-800:]})
             if perlu:
-                rc3, log3, dt3 = jalankan(["graphify", "extract", "./sumber", "--backend", "claude-cli",
+                rc3, log3, dt3 = jalankan(["graphify", "extract", ".", "--backend", "claude-cli",
                                             "--max-concurrency", "1", "--api-timeout", "900"])
                 langkah.append({"perintah": "extract semantik (berkas berubah)", "rc": rc3, "detik": dt3, "ekor": log3[-1500:]})
+    try:
+        langkah.append({"perintah": "kerangka judul .md", **tambah_kerangka(SUMBER, OUT)})
+        rc4, log4, dt4 = klaster_dan_label()
+        langkah.append({"perintah": "label (klaster ulang + nama komunitas, claude-cli)", "rc": rc4, "detik": dt4, "ekor": log4[-600:]})
+    except Exception as ex:
+        langkah.append({"perintah": "kerangka judul .md", "err": str(ex)})
     sesudah = statistik(OUT / "graph.json")
     ok = (OUT / "graph.json").is_file() and "err" not in sesudah and sesudah.get("simpul", 0) > 0
     # penjaga: jangan kirim graf yang menyusut drastis
