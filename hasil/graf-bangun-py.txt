@@ -110,7 +110,7 @@ def main():
     langkah = []
     if "--penuh" in arg or not ada_lama:
         rc, log, dt = jalankan(["graphify", "extract", ".", "--backend", "claude-cli",
-                                "--max-concurrency", "1", "--api-timeout", "900"] + (["--force"] if "--penuh" in arg else []))
+                                "--max-concurrency", "1", "--api-timeout", "240", "--token-budget", "12000"] + (["--force"] if "--penuh" in arg else []))
         langkah.append({"perintah": "extract (semantik, claude-cli)", "rc": rc, "detik": dt, "ekor": log[-1500:]})
     else:
         rc, log, dt = jalankan(["graphify", "update", "."])
@@ -121,7 +121,7 @@ def main():
             langkah.append({"perintah": "check-update", "rc": rc2, "detik": dt2, "perlu_semantik": perlu, "ekor": log2[-800:]})
             if perlu:
                 rc3, log3, dt3 = jalankan(["graphify", "extract", ".", "--backend", "claude-cli",
-                                            "--max-concurrency", "1", "--api-timeout", "900"])
+                                            "--max-concurrency", "1", "--api-timeout", "240", "--token-budget", "12000"])
                 langkah.append({"perintah": "extract semantik (berkas berubah)", "rc": rc3, "detik": dt3, "ekor": log3[-1500:]})
     try:
         langkah.append({"perintah": "kerangka judul .md", **tambah_kerangka(SUMBER, OUT)})
