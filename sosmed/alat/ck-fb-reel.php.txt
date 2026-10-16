@@ -1,0 +1,179 @@
+<?php
+/**
+ * Plugin Name: CK FB Reel (pendamping Jembatan Facebook)
+ * Description: Rute REST ck/v1 untuk mengunggah Reels ke Halaman Cekricek.id memakai token Halaman yang disimpan ck-fb.php. Dipisah dari ck-fb.php supaya plugin utama tidak tersentuh.
+ * Version: 1.0.0
+ * Author: Redaksi Cekricek.id
+ *
+ * Rute (semua manage_options, dipanggil lewat CK Agen wp_baca/wp_tulis):
+ *   GET  /ck/v1/fb-reel-info              cek token: id + nama Halaman dari /me (token tidak pernah dikembalikan)
+ *   POST /ck/v1/fb-reel                   video (URL publik MP4), keterangan, jadwal (ISO, opsional), judul (opsional)
+ *   GET  /ck/v1/fb-reel-status?id=VIDEO   status pemrosesan Reels
+ *
+ * Alur API Reels Meta (Graph v26): start -> rupload file_url -> finish (PUBLISHED / SCHEDULED).
+ * Izin yang dipakai: pages_show_list, pages_read_engagement, pages_manage_posts.
+ */
+
+if ( ! defined( 'ABSPATH' ) ) { exit; }
+
+define( 'CK_FBR_VERSI', '1.0.0' );
+define( 'CK_FBR_GRAPH', 'v26.0' );
+
+/* Token Halaman: pakai fungsi ck-fb.php bila ada, kalau tidak langsung dari opsi. */
+function ck_fbr_token() {
+	foreach ( array( 'ck_fb_token_halaman', 'ck_fb_ambil_token', 'ck_fb_token' ) as $fn ) {
+		if ( function_exists( $fn ) ) {
+			try {
+				$rf = new ReflectionFunction( $fn );
+				if ( $rf->getNumberOfRequiredParameters() > 0 ) { continue; }
+				$t = call_user_func( $fn );
+			} catch ( Throwable $e ) {
+				continue;
+			}
+			if ( is_string( $t ) && strlen( $t ) > 50 ) { return $t; }
+		}
+	}
+	$t = get_option( 'ck_fb_token', '' );
+	return is_string( $t ) ? trim( $t ) : '';
+}
+
+/* Samarkan setiap token yang mungkin ikut dalam jawaban Graph. */
+function ck_fbr_samar( $data ) {
+	$json = wp_json_encode( $data );
+	$json = preg_replace( '/access_token=[^&"\\\\]+/', 'access_token=***', $json );
+	$tok  = ck_fbr_token();
+	if ( $tok ) { $json = str_replace( $tok, '***', $json ); }
+	return json_decode( $json, true );
+}
+
+function ck_fbr_graph( $metode, $jalur, $param = array(), $waktu = 45 ) {
+	$tok = ck_fbr_token();
+	if ( '' === $tok ) { return new WP_Error( 'ck_fbr_token', 'Token Halaman kosong. Hubungkan ulang di Pengaturan > Jembatan Facebook.' ); }
+	$url = 'https://graph.facebook.com/' . CK_FBR_GRAPH . '/' . ltrim( $jalur, '/' );
+	$param['access_token'] = $tok;
+	if ( 'GET' === $metode ) {
+		$r = wp_remote_get( add_query_arg( $param, $url ), array( 'timeout' => $waktu ) );
+	} else {
+		$r = wp_remote_post( $url, array( 'timeout' => $waktu, 'body' => $param ) );
+	}
+	if ( is_wp_error( $r ) ) { return $r; }
+	$kode = wp_remote_retrieve_response_code( $r );
+	$isi  = json_decode( wp_remote_retrieve_body( $r ), true );
+	if ( $kode >= 400 || isset( $isi['error'] ) ) {
+		return new WP_Error( 'ck_fbr_graph', 'Graph menolak', array( 'status' => 502, 'graph' => ck_fbr_samar( $isi ), 'http' => $kode ) );
+	}
+	return $isi;
+}
+
+function ck_fbr_page_id() {
+	if ( function_exists( 'ck_fb_page_id' ) ) {
+		$id = (string) ck_fb_page_id();
+		if ( '' !== $id ) { return $id; }
+	}
+	$id = get_transient( 'ck_fbr_page_id' );
+	if ( $id ) { return $id; }
+	$me = ck_fbr_graph( 'GET', 'me', array( 'fields' => 'id,name' ), 20 );
+	if ( is_wp_error( $me ) || empty( $me['id'] ) ) { return is_wp_error( $me ) ? $me : new WP_Error( 'ck_fbr_me', 'Tidak bisa membaca /me' ); }
+	set_transient( 'ck_fbr_page_id', $me['id'], DAY_IN_SECONDS );
+	return $me['id'];
+}
+
+function ck_fbr_log( $baris ) {
+	$log = get_option( 'ck_fbr_log', array() );
+	if ( ! is_array( $log ) ) { $log = array(); }
+	array_unshift( $log, array_merge( array( 'waktu' => current_time( 'mysql' ) ), $baris ) );
+	update_option( 'ck_fbr_log', array_slice( $log, 0, 50 ), false );
+}
+
+add_action( 'rest_api_init', function () {
+	$izin = function () { return current_user_can( 'manage_options' ); };
+
+	register_rest_route( 'ck/v1', '/fb-reel-info', array(
+		'methods'             => 'GET',
+		'permission_callback' => $izin,
+		'callback'            => function () {
+			$tok = ck_fbr_token();
+			$me  = $tok ? ck_fbr_graph( 'GET', 'me', array( 'fields' => 'id,name' ), 20 ) : null;
+			return array(
+				'versi'         => CK_FBR_VERSI,
+				'graph'         => CK_FBR_GRAPH,
+				'token_terisi'  => '' !== $tok,
+				'halaman'       => is_wp_error( $me ) ? null : $me,
+				'galat'         => is_wp_error( $me ) ? $me->get_error_data() : null,
+				'siap'          => $me && ! is_wp_error( $me ) && ! empty( $me['id'] ),
+				'log'           => array_slice( (array) get_option( 'ck_fbr_log', array() ), 0, 10 ),
+			);
+		},
+	) );
+
+	register_rest_route( 'ck/v1', '/fb-reel', array(
+		'methods'             => 'POST',
+		'permission_callback' => $izin,
+		'callback'            => function ( WP_REST_Request $q ) {
+			$video = esc_url_raw( (string) $q->get_param( 'video' ) );
+			$ket   = (string) $q->get_param( 'keterangan' );
+			$judul = (string) $q->get_param( 'judul' );
+			$jadwal = (string) $q->get_param( 'jadwal' );
+			if ( ! $video || 0 !== strpos( $video, 'https://' ) ) {
+				return new WP_Error( 'ck_fbr_video', 'Parameter video wajib URL https publik ke berkas MP4.', array( 'status' => 400 ) );
+			}
+			$waktu_jadwal = 0;
+			if ( '' !== $jadwal ) {
+				$waktu_jadwal = strtotime( $jadwal );
+				$sel = $waktu_jadwal - time();
+				if ( ! $waktu_jadwal || $sel < 600 || $sel > 180 * DAY_IN_SECONDS ) {
+					return new WP_Error( 'ck_fbr_jadwal', 'Jadwal harus 10 menit sampai 180 hari ke depan (ISO 8601).', array( 'status' => 400 ) );
+				}
+			}
+			$page = ck_fbr_page_id();
+			if ( is_wp_error( $page ) ) { return $page; }
+
+			// 1. start
+			$mulai = ck_fbr_graph( 'POST', $page . '/video_reels', array( 'upload_phase' => 'start' ), 30 );
+			if ( is_wp_error( $mulai ) ) { return $mulai; }
+			$vid = isset( $mulai['video_id'] ) ? $mulai['video_id'] : '';
+			if ( ! $vid ) { return new WP_Error( 'ck_fbr_start', 'Graph tidak memberi video_id', array( 'status' => 502, 'graph' => ck_fbr_samar( $mulai ) ) ); }
+
+			// 2. unggah dari URL publik (Meta yang menarik berkasnya)
+			$up = wp_remote_post( 'https://rupload.facebook.com/video-upload/' . CK_FBR_GRAPH . '/' . $vid, array(
+				'timeout' => 90,
+				'headers' => array( 'Authorization' => 'OAuth ' . ck_fbr_token(), 'file_url' => $video ),
+			) );
+			if ( is_wp_error( $up ) ) { ck_fbr_log( array( 'video_id' => $vid, 'tahap' => 'unggah', 'galat' => $up->get_error_message() ) ); return $up; }
+			$up_isi = json_decode( wp_remote_retrieve_body( $up ), true );
+			if ( empty( $up_isi['success'] ) ) {
+				ck_fbr_log( array( 'video_id' => $vid, 'tahap' => 'unggah', 'jawab' => ck_fbr_samar( $up_isi ) ) );
+				return new WP_Error( 'ck_fbr_unggah', 'Meta gagal menarik video', array( 'status' => 502, 'video_id' => $vid, 'graph' => ck_fbr_samar( $up_isi ) ) );
+			}
+
+			// 3. finish
+			$p = array( 'upload_phase' => 'finish', 'video_id' => $vid, 'description' => $ket );
+			if ( '' !== $judul ) { $p['title'] = $judul; }
+			if ( $waktu_jadwal ) {
+				$p['video_state'] = 'SCHEDULED';
+				$p['scheduled_publish_time'] = $waktu_jadwal;
+			} else {
+				$p['video_state'] = 'PUBLISHED';
+			}
+			$akhir = ck_fbr_graph( 'POST', $page . '/video_reels', $p, 45 );
+			if ( is_wp_error( $akhir ) ) {
+				ck_fbr_log( array( 'video_id' => $vid, 'tahap' => 'finish', 'galat' => $akhir->get_error_data() ) );
+				$d = $akhir->get_error_data(); $d['video_id'] = $vid; $akhir->add_data( $d );
+				return $akhir;
+			}
+			ck_fbr_log( array( 'video_id' => $vid, 'tahap' => 'selesai', 'jadwal' => $waktu_jadwal ? gmdate( 'c', $waktu_jadwal ) : null, 'video' => $video ) );
+			return array( 'ok' => true, 'video_id' => $vid, 'status' => $waktu_jadwal ? 'terjadwal' : 'diproses', 'jadwal' => $waktu_jadwal ? gmdate( 'c', $waktu_jadwal ) : null, 'graph' => ck_fbr_samar( $akhir ) );
+		},
+	) );
+
+	register_rest_route( 'ck/v1', '/fb-reel-status', array(
+		'methods'             => 'GET',
+		'permission_callback' => $izin,
+		'callback'            => function ( WP_REST_Request $q ) {
+			$id = preg_replace( '/[^0-9]/', '', (string) $q->get_param( 'id' ) );
+			if ( ! $id ) { return new WP_Error( 'ck_fbr_id', 'Parameter id wajib.', array( 'status' => 400 ) ); }
+			$r = ck_fbr_graph( 'GET', $id, array( 'fields' => 'status,permalink_url,description,created_time,published,scheduled_publish_time,length' ), 20 );
+			return is_wp_error( $r ) ? $r : ck_fbr_samar( $r );
+		},
+	) );
+} );
