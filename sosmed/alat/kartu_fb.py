@@ -35,12 +35,9 @@ def _judul(d, o, maxw, maxbaris, besar, kecil):
 
 
 def _kaki(d, o, warna_teks, warna_garis):
-    """Kaki: cekricek.id di kiri; kredit foto di kanan, sejajar (koreksi AFP 16 Okt 2026).
-    Teks "Kisah lengkapnya di situs" dihapus atas koreksi AFP 16 Okt 2026."""
+    """Kaki: HANYA kredit foto di kanan bawah. Teks "cekricek.id" kiri dan "Kisah lengkapnya di situs"
+    dihapus atas koreksi AFP 16 Okt 2026 (18.36) — logo di atas sudah cukup."""
     y = H - 70
-    d.line([(TEPI, y), (W - TEPI, y)], fill=warna_garis, width=1)
-    ft = K.font("medium", 22)
-    d.text((TEPI, y + 20), "c e k r i c e k . i d", font=ft, fill=warna_teks)
     if o.get("kredit"):
         fk = K.font("light", 19)
         d.text((W - TEPI - d.textlength(o["kredit"], font=fk), y + 22), o["kredit"], font=fk, fill=warna_teks)
@@ -71,8 +68,6 @@ def foto(o):
     K.gradasi_atas(im, 170, K.MALAM, 150)
     d = ImageDraw.Draw(im, "RGBA")
     lg = K.wordmark(58, "putih"); im.paste(lg, (TEPI - 6, 56), lg)
-    if o.get("rubrik"):
-        K.label(d, W - TEPI - 150, 62, o["rubrik"], K.ORANYE, K.MALAM)
     _badan(d, o, FH - 200, K.PUTIH, K.ORANYE, K.ABU, maxbaris=5, besar=80)
     _kaki(d, o, (150, 168, 184), (60, 78, 96))
     return K.butir(im, 4)
@@ -87,8 +82,6 @@ def malam(o):
     im = ImageChops.add(im, glow)
     d = ImageDraw.Draw(im, "RGBA")
     lg = K.wordmark(58, "putih"); im.paste(lg, (TEPI - 6, 56), lg)
-    if o.get("rubrik"):
-        K.label(d, TEPI, 150, o["rubrik"], K.ORANYE, K.MALAM)
     _badan(d, o, 240, K.PUTIH, K.ORANYE, K.ABU)
     _kaki(d, o, (150, 168, 184), (60, 78, 96))
     return K.butir(im, 5)
@@ -100,8 +93,6 @@ def kertas(o):
     d = ImageDraw.Draw(im, "RGBA")
     d.rectangle([0, 0, W, 10], fill=K.ORANYE)
     lg = K.wordmark(58, "gelap"); im.paste(lg, (TEPI - 6, 64), lg)
-    if o.get("rubrik"):
-        K.label(d, TEPI, 158, o["rubrik"], K.MALAM, K.KRIM)
     _badan(d, o, 250, K.MALAM, (200, 96, 0), (88, 100, 112))
     _kaki(d, o, (120, 130, 140), (205, 198, 186))
     return K.butir(im, 3)
@@ -112,8 +103,6 @@ def kutipan(o):
     im = K.gradasi(W, H, (14, 36, 52), K.MALAM)
     d = ImageDraw.Draw(im, "RGBA")
     lg = K.wordmark(58, "putih"); im.paste(lg, (TEPI - 6, 56), lg)
-    if o.get("rubrik"):
-        K.label(d, TEPI, 150, o["rubrik"], K.ORANYE, K.MALAM)
     fq = K.serif("bold", 260)
     d.text((TEPI - 12, 190), "“", font=fq, fill=K.ORANYE + (235,))
     toks = K.tokens(o["judul"])
@@ -159,7 +148,7 @@ def buat(o, keluar):
 
 def sampul(o):
     """Pola yang terbukti tinggi impresinya: foto sebidang besar, satu kalimat kail besar di panel
-    terang di bawah foto (kontras atau pertanyaan), label kecil di atas panel. Kail bukan judul artikel."""
+    terang di bawah foto (kontras atau pertanyaan). Tanpa label; kail bukan judul artikel."""
     FH = 900
     im = Image.new("RGB", (W, H), K.MALAM)
     f = K.vignette(K.hangatkan(K.foto_pas(o["foto"], W, FH, o.get("fokus", 0.5)), 1.04), 0.3)
@@ -176,19 +165,11 @@ def sampul(o):
     ph = len(b) * lh + 96
     py = min(FH - 120, H - 96 - ph - 20)
     py = max(py, H - 110 - ph - 10) if py + ph > H - 110 else py
-    # label di atas panel
-    lab = o.get("label") or o.get("rubrik", "")
-    if lab:
-        fl = K.serif("bolditalic", 34)
-        tw = d.textlength(lab, font=fl)
-        d.rounded_rectangle([PX, py - 64, PX + tw + 44, py + 10], 10, fill=(246, 241, 232, 235))
-        d.text((PX + 22, py - 56), lab, font=fl, fill=(60, 52, 44))
+    # label seri di atas panel DIHAPUS (koreksi AFP 16 Okt 2026, 18.36): nama seri hanya di caption
     d.rounded_rectangle([PX, py, PX + PW, py + ph], 22, fill=(255, 255, 255, 246))
     d.rectangle([PX, py + 26, PX + 8, py + ph - 26], fill=K.ORANYE)
     K.tulis(d, b, ft, PX + 48, py + 46, lh, K.MALAM, (214, 104, 0), ft2)
-    # kaki di bidang gelap: cekricek.id kiri, kredit foto kanan sejajar (koreksi AFP 16 Okt 2026)
-    ftk = K.font("medium", 22)
-    d.text((TEPI, H - 62), "c e k r i c e k . i d", font=ftk, fill=(150, 168, 184))
+    # kaki: hanya kredit foto di kanan bawah (koreksi AFP 16 Okt 2026, 18.36)
     if o.get("kredit"):
         fk = K.font("light", 19)
         d.text((W - TEPI - d.textlength(o["kredit"], font=fk), H - 60), o["kredit"], font=fk, fill=(150, 168, 184))
