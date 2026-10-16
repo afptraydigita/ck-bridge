@@ -7,10 +7,10 @@ Pakai:
 naskah.json:
   {"rubrik": "Rona", "gaya": "feature",            # feature = serif Lora, berita = Poppins
    "judul": "Orang Rimba di Jambi Sudah Mengenal *Satu Tuhan* Sebelum Berislam",   # layar penutup
-   "foto": "foto/279173.webp", "fokus": 0.5, "kredit": "Foto: .../Wikimedia Commons",  # opsional
-   "adegan": [
-      {"jenis": "kail",    "teks": "...", "detik": 5},
-      {"jenis": "fakta",   "teks": "...", "sorot": "Alah Ta'ala"},
+   "foto": "foto/279173.webp", "fokus": 0.5, "kredit": "Foto: .../Wikimedia Commons",  # foto bawaan
+   "adegan": [                                     # tiap adegan BOLEH punya foto sendiri (ketentuan AFP 16 Okt 2026:
+      {"jenis": "kail",    "teks": "...", "detik": 5, "foto": "foto/a.webp", "fokus": 0.4, "kredit": "Foto: ..."},
+      {"jenis": "fakta",   "teks": "...", "sorot": "Alah Ta'ala", "foto": "foto/b.webp", "kredit": "Foto: ..."},
       {"jenis": "kutipan", "teks": "...", "oleh": "Temenggung Pemubar"},
       {"jenis": "angka",   "teks": "2", "sub": "nabi yang dikenal Orang Rimba"},
       {"jenis": "penutup", "teks": "Selengkapnya di cekricek.id"}
@@ -19,6 +19,12 @@ naskah.json:
   }
 Durasi tiap adegan dihitung dari panjang teks (3,5–7,5 detik) bila "detik" tidak diisi.
 Teks muncul baris demi baris, selalu terbaca tanpa suara.
+
+KETENTUAN DESAIN AFP 16 Okt 2026 (18.59), mengikat:
+  1. kredit foto di PALING BAWAH frame, sebelah kanan;
+  2. teks TIDAK di tengah frame — ditempatkan di sepertiga bawah supaya foto tetap bisa dinikmati;
+  3. foto BUKAN cuma satu: beberapa foto bergantian per adegan, tiap foto wajib bersesuaian dengan narasi adegannya;
+  4. isi dan desain wajib menarik penonton.
 """
 import json, os, shutil, subprocess, sys, tempfile
 import numpy as np
@@ -48,10 +54,11 @@ _LATAR = {}
 
 
 def _latar_foto(path, fokus):
-    if path not in _LATAR:
+    if (path, fokus) not in _LATAR:
         penuh = K.foto_pas(path, W, H, fokus)
-        _LATAR[path] = K.gelapkan(K.vignette(K.hangatkan(penuh, 1.05), 0.5), 0.62)
-    return _LATAR[path]
+        # lebih terang daripada versi lama (0.62): foto harus bisa dinikmati (ketentuan AFP 16 Okt 2026)
+        _LATAR[(path, fokus)] = K.vignette(K.hangatkan(penuh, 1.05), 0.35)
+    return _LATAR[(path, fokus)]
 
 
 def _latar_malam():
@@ -64,25 +71,44 @@ def _latar_malam():
     return _LATAR["malam"]
 
 
-def _frame_dasar(t, total, naskah):
-    u = t / max(1e-6, total)
-    foto = naskah.get("foto")
+def _foto_adegan(a, naskah):
+    """Foto adegan: milik adegan sendiri bila ada, kalau tidak foto bawaan naskah."""
+    foto = a.get("foto") or naskah.get("foto")
+    fokus = a.get("fokus", naskah.get("fokus", 0.5)) if a.get("foto") else naskah.get("fokus", 0.5)
+    kredit = a.get("kredit") if a.get("foto") else naskah.get("kredit")
+    if a.get("foto") and not a.get("kredit"):
+        kredit = naskah.get("kredit")
+    return foto, fokus, kredit
+
+
+def _frame_dasar(t_global, total, naskah, a=None, u_adegan=0.0, sebelumnya=None):
+    """Latar satu frame. Ken Burns berjalan per adegan (u_adegan 0..1); 0,5 detik pertama adegan
+    melebur dari foto adegan sebelumnya (sebelumnya = gambar latar terakhir adegan lalu)."""
+    foto, fokus, kredit = _foto_adegan(a or {}, naskah)
     if foto:
-        im = K.ken_burns(_latar_foto(foto, naskah.get("fokus", 0.5)), u, 1.10, (0.5, 0.4))
-        K.gradasi_bawah(im, 1500, 420, K.MALAM, kurva=0.45, puncak=225)
-        K.gradasi_atas(im, 260, K.MALAM, 190)
+        arah = (0.5, 0.35) if (a or {}).get("jenis") == "kail" else (0.5, 0.5)
+        im = K.ken_burns(_latar_foto(foto, fokus), u_adegan, 1.10, arah)
     else:
-        im = K.ken_burns(_latar_malam(), u, 1.04)
+        im = K.ken_burns(_latar_malam(), u_adegan, 1.04)
+    if sebelumnya is not None and u_adegan * (a or {}).get("_dur", 1) < 0.5:
+        campur = _ease(u_adegan * (a or {}).get("_dur", 1) / 0.5)
+        im = Image.blend(sebelumnya, im, campur)
+    latar_bersih = im.copy()
+    # gradasi hanya sepertiga bawah (tempat teks) + tipis di atas untuk logo; tengah frame dibiarkan bersih
+    K.gradasi_bawah(im, 900, H - 900, K.MALAM, kurva=0.5, puncak=238)
+    K.gradasi_atas(im, 240, K.MALAM, 150)
     d = ImageDraw.Draw(im, "RGBA")
     lg = K.wordmark(54, "putih")
     im.paste(lg, (TEPI - 4, AMAN_ATAS - 130), lg)
     # label rubrik DIHAPUS (koreksi AFP 16 Okt 2026, 18.37: berlaku untuk semua konten FB dan IG)
+    u = t_global / max(1e-6, total)
     d.rectangle([TEPI, AMAN_ATAS - 44, W - TEPI, AMAN_ATAS - 41], fill=(255, 255, 255, 50))
     d.rectangle([TEPI, AMAN_ATAS - 44, TEPI + (W - 2 * TEPI) * u, AMAN_ATAS - 41], fill=K.ORANYE)
-    if foto and naskah.get("kredit"):
+    if foto and kredit:
+        # ketentuan AFP 16 Okt 2026: kredit di PALING BAWAH frame, sebelah kanan
         fk = K.font("light", 19)
-        t2 = naskah["kredit"]
-        d.text((W - TEPI - d.textlength(t2, font=fk), H - AMAN_BAWAH + 30), t2, font=fk, fill=(170, 184, 198, 200))
+        d.text((W - TEPI - d.textlength(kredit, font=fk), H - 50), kredit, font=fk, fill=(200, 210, 220, 210))
+    im._latar_bersih = latar_bersih
     return im
 
 
@@ -103,20 +129,22 @@ def _gambar_adegan(a, u, im, naskah):
     t = u * dur
     fade_out = _ease((dur - t) / 0.5)
     maxw = W - 2 * TEPI
-    atas, bawah = AMAN_ATAS + 40, H - AMAN_BAWAH - 40
+    # ketentuan AFP 16 Okt 2026: teks di sepertiga bawah, bukan tengah frame; batas bawah di atas zona UI aplikasi
+    atas, bawah = H - AMAN_BAWAH - 40 - 700, H - AMAN_BAWAH - 40
 
     if jenis == "angka":
         fa = K.serif("bold", 320) if gaya == "feature" else K.font("bold", 300)
         masuk = _ease(t / 0.6)
         al = int(255 * min(masuk, fade_out))
         tw = d.textlength(a["teks"], font=fa)
-        y = (atas + bawah) // 2 - 260 + int(30 * (1 - masuk))
-        d.text(((W - tw) / 2, y), a["teks"], font=fa, fill=K.ORANYE + (al,))
         fs = K.font("medium", 44)
+        nsub = len(K.bungkus_teks(d, a.get("sub", ""), fs, maxw - 80))
+        y = bawah - 400 - nsub * 58 - 20 + int(30 * (1 - masuk))
+        d.text((TEPI, y), a["teks"], font=fa, fill=K.ORANYE + (al,))
         al2 = int(255 * min(_ease((t - 0.5) / 0.6), fade_out))
         yy = y + 400
         for s in K.bungkus_teks(d, a.get("sub", ""), fs, maxw - 80):
-            d.text(((W - d.textlength(s, font=fs)) / 2, yy), s, font=fs, fill=K.PUTIH + (al2,)); yy += 58
+            d.text((TEPI, yy), s, font=fs, fill=K.PUTIH + (al2,)); yy += 58
         return
 
     if jenis == "penutup":
@@ -129,7 +157,7 @@ def _gambar_adegan(a, u, im, naskah):
         masuk = _ease(t / 0.6)
         al = int(255 * min(masuk, fade_out))
         tinggi = len(b) * lh + 150
-        y = (atas + bawah - tinggi) // 2 + int(30 * (1 - masuk))
+        y = bawah - tinggi + int(30 * (1 - masuk))
         d.rectangle([TEPI, y - 30, TEPI + 72, y - 24], fill=K.ORANYE + (al,))
         K.tulis(d, b, ft, TEPI, y, lh, K.PUTIH, K.ORANYE, ft2, alpha=al)
         y += len(b) * lh + 44
@@ -145,15 +173,15 @@ def _gambar_adegan(a, u, im, naskah):
     if gaya == "feature":
         besar = 84 if jenis == "kail" else 66
         w, w2 = ("italic", "bolditalic") if jenis == "kutipan" else ("bold", "bolditalic")
-        ft, ft2, b, sz = K.pas(d, toks, maxw, 9, besar, 44, "serif", w, w2)
+        ft, ft2, b, sz = K.pas(d, toks, maxw, 7, besar, 44, "serif", w, w2)
         lh = int(sz * 1.2)
     else:
         besar = 80 if jenis == "kail" else 64
-        ft, ft2, b, sz = K.pas(d, toks, maxw, 9, besar, 42, "sans", "bold", None)
+        ft, ft2, b, sz = K.pas(d, toks, maxw, 7, besar, 42, "sans", "bold", None)
         lh = int(sz * 1.22)
     ekstra = 120 if jenis == "kutipan" else 0
     tinggi = len(b) * lh + ekstra + (60 if a.get("oleh") else 0)
-    y = (atas + bawah - tinggi) // 2
+    y = max(atas, bawah - tinggi)
     if jenis == "kutipan":
         fq = K.serif("bold", 220)
         al = int(255 * min(_ease(t / 0.4), fade_out))
@@ -213,21 +241,29 @@ def musik_sintetis(detik, keluar, sr=44100):
 # ------------------------------------------------------------- rakit
 def buat(naskah, keluar):
     adegan = list(naskah["adegan"])
-    foto = naskah.get("foto")
-    if foto and not os.path.exists(foto):
-        raise SystemExit(f"foto tidak ditemukan: {foto}")
+    for f in [naskah.get("foto")] + [a.get("foto") for a in adegan]:
+        if f and not os.path.exists(f):
+            raise SystemExit(f"foto tidak ditemukan: {f}")
+    foto_unik = {a.get("foto") or naskah.get("foto") for a in adegan} - {None}
+    if len(foto_unik) < 2 and len(adegan) > 2:
+        sys.stderr.write("PERINGATAN: hanya satu foto untuk seluruh Reels; ketentuan AFP 16 Okt 2026 minta beberapa foto bergantian yang sesuai narasi.\n")
     for a in adegan:
         a["_dur"] = _durasi(a)
     total = sum(a["_dur"] for a in adegan)
     tmp = tempfile.mkdtemp(prefix="reels_")
     n, t_mulai = 0, 0.0
+    sebelumnya = None
     for a in adegan:
         nf = int(round(a["_dur"] * FPS))
+        terakhir = None
         for i in range(nf):
-            im = _frame_dasar(t_mulai + i / FPS, total, naskah)
-            _gambar_adegan(a, i / max(1, nf - 1), im, naskah)
+            ua = i / max(1, nf - 1)
+            im = _frame_dasar(t_mulai + i / FPS, total, naskah, a, ua, sebelumnya)
+            terakhir = im._latar_bersih
+            _gambar_adegan(a, ua, im, naskah)
             im.save(os.path.join(tmp, f"{n:05d}.jpg"), quality=92)
             n += 1
+        sebelumnya = terakhir
         t_mulai += a["_dur"]
     # ATURAN AFP 16 Okt 2026 (tidak boleh dilanggar): audio Reels HANYA dari Facebook Sound Collection
     # (facebook.com/sound/collection), berkas di aset/musik/ dengan catatan di aset/musik/LISENSI.txt.
