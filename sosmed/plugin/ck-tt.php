@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CK TT (Jembatan TikTok)
  * Description: Menerbitkan video Reels Cekricek.id ke TikTok @cekricekid lewat TikTok Content Posting API (Direct Post, FILE_UPLOAD). Rute REST ck/v1 untuk CK Agen. Pendamping ck-fb.php dan ck-ig.php.
- * Version: 1.0.3
+ * Version: 1.1.0
  * Author: Redaksi Cekricek.id
  *
  * Pengaturan: Pengaturan > Jembatan TikTok (options-general.php?page=ck-tt): Client Key, Client Secret (tidak
@@ -22,7 +22,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-define( 'CK_TT_VERSI', '1.0.3' );
+define( 'CK_TT_VERSI', '1.1.0' );
 define( 'CK_TT_API', 'https://open.tiktokapis.com/v2/' );
 define( 'CK_TT_SCOPE', 'user.info.basic,video.publish,video.upload' );
 
@@ -155,6 +155,17 @@ add_action( 'admin_init', function () {
 		ck_tt_log( array( 'tahap' => 'diputus' ) );
 		wp_safe_redirect( add_query_arg( 'pesan', 'diputus', ck_tt_redirect() ) ); exit;
 	}
+	if ( isset( $_POST['ck_tt_kirim'] ) && check_admin_referer( 'ck_tt_kirim' ) ) {
+		$isi = array(
+			'video'     => esc_url_raw( (string) wp_unslash( $_POST['ck_tt_video'] ?? '' ) ),
+			'judul'     => sanitize_text_field( (string) wp_unslash( $_POST['ck_tt_judul'] ?? '' ) ),
+			'privasi'   => in_array( $_POST['ck_tt_privasi'] ?? '', array( 'PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'SELF_ONLY' ), true ) ? $_POST['ck_tt_privasi'] : 'SELF_ONLY',
+			'sampul_ms' => 1000,
+		);
+		$h = ck_tt_terbitkan_sekarang( $isi );
+		if ( is_wp_error( $h ) ) { set_transient( 'ck_tt_galat', $h->get_error_message() . ' ' . wp_json_encode( $h->get_error_data() ), 5 * MINUTE_IN_SECONDS ); wp_safe_redirect( add_query_arg( 'pesan', 'kirim_gagal', ck_tt_redirect() ) ); exit; }
+		wp_safe_redirect( add_query_arg( array( 'pesan' => 'terkirim', 'publish_id' => rawurlencode( $h['publish_id'] ) ), ck_tt_redirect() ) ); exit;
+	}
 	if ( isset( $_GET['ck_tt_mulai'] ) && check_admin_referer( 'ck_tt_mulai' ) ) {
 		$state = wp_generate_password( 24, false );
 		set_transient( 'ck_tt_state', $state, 15 * MINUTE_IN_SECONDS );
@@ -188,7 +199,7 @@ add_action( 'admin_init', function () {
 
 function ck_tt_halaman_pengaturan() {
 	$pesan = isset( $_GET['pesan'] ) ? sanitize_key( $_GET['pesan'] ) : '';
-	$peta  = array( 'tersimpan' => 'Pengaturan tersimpan.', 'diputus' => 'Sambungan TikTok diputus.', 'tersambung' => 'Tersambung ke TikTok.', 'state' => 'Pengaman state tidak cocok; coba Hubungkan lagi.', 'gagal' => 'Gagal menghubungkan: ' . esc_html( (string) get_transient( 'ck_tt_galat' ) ) );
+	$peta  = array( 'tersimpan' => 'Pengaturan tersimpan.', 'diputus' => 'Sambungan TikTok diputus.', 'tersambung' => 'Tersambung ke TikTok.', 'state' => 'Pengaman state tidak cocok; coba Hubungkan lagi.', 'gagal' => 'Gagal menghubungkan: ' . esc_html( (string) get_transient( 'ck_tt_galat' ) ), 'kirim_gagal' => 'Kirim gagal: ' . esc_html( (string) get_transient( 'ck_tt_galat' ) ), 'terkirim' => 'Video dikirim ke TikTok. publish_id: <code>' . esc_html( (string) ( $_GET['publish_id'] ?? '' ) ) . '</code>' );
 	$tok = ck_tt_token(); $akun = (array) get_option( 'ck_tt_akun', array() );
 	echo '<div class="wrap"><h1>Jembatan TikTok v' . esc_html( CK_TT_VERSI ) . '</h1>';
 	if ( $pesan && isset( $peta[ $pesan ] ) ) { echo '<div class="notice notice-info"><p>' . $peta[ $pesan ] . '</p></div>'; }
@@ -205,6 +216,18 @@ function ck_tt_halaman_pengaturan() {
 	} else {
 		if ( ! ck_tt_key() || ! ck_tt_secret() ) { echo '<p><em>Isi Client Key dan Client Secret dulu, lalu Simpan.</em></p>'; }
 		echo '<p><a class="button button-primary" href="' . esc_url( wp_nonce_url( add_query_arg( 'ck_tt_mulai', '1', ck_tt_redirect() ), 'ck_tt_mulai' ) ) . '">Hubungkan akun TikTok</a> <span class="description">Masuk sebagai @cekricekid lalu setujui izin.</span></p>';
+	}
+	if ( $tok ) {
+		echo '<h2>3. Kirim video (Direct Post)</h2><form method="post">'; wp_nonce_field( 'ck_tt_kirim' );
+		echo '<table class="form-table"><tr><th>URL video MP4</th><td><input type="url" name="ck_tt_video" class="large-text" required placeholder="https://.../video.mp4"></td></tr>';
+		echo '<tr><th>Judul / keterangan</th><td><input type="text" name="ck_tt_judul" class="large-text" maxlength="2200"></td></tr>';
+		echo '<tr><th>Privasi</th><td><select name="ck_tt_privasi"><option value="SELF_ONLY">Hanya saya</option><option value="MUTUAL_FOLLOW_FRIENDS">Teman</option><option value="PUBLIC_TO_EVERYONE">Publik</option></select></td></tr></table>';
+		echo '<p><button class="button button-primary" name="ck_tt_kirim" value="1">Kirim ke TikTok</button></p></form>';
+		$pid = isset( $_GET['publish_id'] ) ? (string) wp_unslash( $_GET['publish_id'] ) : '';
+		if ( $pid ) {
+			$st = ck_tt_api( 'POST', 'post/publish/status/fetch/', array( 'publish_id' => $pid ), 20 );
+			echo '<p>Status TikTok untuk <code>' . esc_html( $pid ) . '</code>: <strong>' . esc_html( is_wp_error( $st ) ? $st->get_error_message() : (string) ( $st['data']['status'] ?? '?' ) ) . '</strong> <a class="button" href="' . esc_url( add_query_arg( 'publish_id', rawurlencode( $pid ), ck_tt_redirect() ) ) . '">Segarkan status</a></p>';
+		}
 	}
 	$log = array_slice( (array) get_option( 'ck_tt_log', array() ), 0, 10 );
 	if ( $log ) {
