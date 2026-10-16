@@ -39,9 +39,7 @@ def _kaki(d, o, warna_teks, warna_garis):
     d.line([(TEPI, y), (W - TEPI, y)], fill=warna_garis, width=1)
     ft = K.font("medium", 22)
     d.text((TEPI, y + 20), "c e k r i c e k . i d", font=ft, fill=warna_teks)
-    ft2 = K.font("light", 20)
-    t2 = o.get("kaki", "Baca selengkapnya di situs")
-    d.text((W - TEPI - d.textlength(t2, font=ft2), y + 22), t2, font=ft2, fill=warna_teks)
+    # Teks kaki kanan dihapus atas koreksi AFP 16 Okt 2026 ("tidak perlu").
 
 
 def _badan(d, o, y_atas, warna_judul, warna_sorot, warna_ring, maxbaris=6, besar=92):
@@ -182,9 +180,6 @@ def sampul(o):
     # kaki di bidang gelap
     ftk = K.font("medium", 22)
     d.text((TEPI, H - 62), "c e k r i c e k . i d", font=ftk, fill=(150, 168, 184))
-    t2 = o.get("kaki", "Kisah lengkapnya di situs")
-    ft3 = K.font("light", 20)
-    d.text((W - TEPI - d.textlength(t2, font=ft3), H - 60), t2, font=ft3, fill=(150, 168, 184))
     return K.butir(im, 3)
 
 
