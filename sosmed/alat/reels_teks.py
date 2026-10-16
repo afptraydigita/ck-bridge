@@ -15,7 +15,7 @@ naskah.json:
       {"jenis": "angka",   "teks": "2", "sub": "nabi yang dikenal Orang Rimba"},
       {"jenis": "penutup", "teks": "Selengkapnya di cekricek.id"}
    ],
-   "musik": "aset/musik/namafile.mp3"   # opsional; kosong = pad sintetis bebas hak cipta
+   "musik": "aset/musik/namafile.mp3"   # WAJIB dari Facebook Sound Collection (aturan AFP 16 Okt 2026); kosong = tanpa audio
   }
 Durasi tiap adegan dihitung dari panjang teks (3,5–7,5 detik) bila "detik" tidak diisi.
 Teks muncul baris demi baris, selalu terbaca tanpa suara.
@@ -229,12 +229,17 @@ def buat(naskah, keluar):
             im.save(os.path.join(tmp, f"{n:05d}.jpg"), quality=92)
             n += 1
         t_mulai += a["_dur"]
+    # ATURAN AFP 16 Okt 2026 (tidak boleh dilanggar): audio Reels HANYA dari Facebook Sound Collection
+    # (facebook.com/sound/collection), berkas di aset/musik/ dengan catatan di aset/musik/LISENSI.txt.
+    # Pad sintetis tidak dipakai lagi; tanpa berkas musik yang sah, Reels dibuat TANPA audio.
     musik = naskah.get("musik")
     if musik and os.path.exists(musik):
         audio, af = musik, ["-af", f"afade=t=in:d=1,afade=t=out:st={max(0, total - 2.5)}:d=2.5,volume=0.5"]
     else:
-        audio, af = os.path.join(tmp, "musik.wav"), []
-        musik_sintetis(total, audio)
+        sys.stderr.write("PERINGATAN: tidak ada berkas musik Sound Collection; Reels dirender TANPA audio.\n")
+        audio, af = os.path.join(tmp, "senyap.wav"), []
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
+                        "-t", f"{total:.2f}", audio], check=True)
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", os.path.join(tmp, "%05d.jpg"),
            "-i", audio, *af, "-t", f"{total:.2f}", "-shortest",
            "-vf", "noise=alls=3:allf=t",
