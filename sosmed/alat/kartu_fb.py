@@ -137,7 +137,18 @@ def kutipan(o):
 TEMPLAT = {"foto": foto, "malam": malam, "kertas": kertas, "kutipan": kutipan}
 
 
+def _tanpa_titik(teks):
+    """Judul dan kail tanpa tanda titik di ujung (koreksi AFP 16 Okt 2026). Tanda tanya/seru dibiarkan."""
+    teks = teks.strip()
+    while teks.endswith(".") or teks.endswith(".*"):
+        teks = teks[:-2] + "*" if teks.endswith(".*") else teks[:-1]
+    return teks
+
+
 def buat(o, keluar):
+    for k in ("judul", "kail"):
+        if o.get(k) and o.get("templat") != "kutipan":
+            o[k] = _tanpa_titik(o[k])
     t = o.get("templat") or ("foto" if o.get("foto") else "malam")
     im = TEMPLAT[t](o)
     im.save(keluar, "PNG", optimize=True)
