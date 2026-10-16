@@ -1,0 +1,217 @@
+<?php
+/**
+ * Plugin Name: CK IG (pendamping Jembatan Facebook)
+ * Description: Rute REST ck/v1 untuk menerbitkan foto dan Reels ke Instagram @cekricekid lewat Instagram Graph API, memakai token Halaman yang disimpan ck-fb.php. Terpisah dari ck-fb.php.
+ * Version: 1.0.0
+ * Author: Redaksi Cekricek.id
+ *
+ * Rute (semua manage_options, lewat CK Agen wp_baca/wp_tulis):
+ *   GET  /ck/v1/ig-info                 akun IG yang tertaut ke Halaman (id, username, pengikut), siap/tidak
+ *   POST /ck/v1/ig-kirim                gambar (URL JPEG publik), keterangan  -> foto feed
+ *   POST /ck/v1/ig-reel                 video (URL MP4 publik), keterangan, bagikan_feed (default true) -> Reels
+ *   GET  /ck/v1/ig-status?id=CONTAINER  status kontainer (FINISHED / IN_PROGRESS / ERROR)
+ *   POST /ck/v1/ig-terbitkan            id kontainer -> media_publish (dipakai bila ig-reel menunggu pemrosesan)
+ *   GET  /ck/v1/ig-daftar?jumlah=N      media terakhir akun
+ *
+ * Izin yang dibutuhkan pada token Halaman: instagram_basic, instagram_content_publish
+ * (ditambah pages_show_list, pages_read_engagement). Instagram API tidak mendukung penjadwalan;
+ * penjadwalan dilakukan WP-Cron di sini (parameter jadwal = ISO 8601, opsional).
+ */
+
+if ( ! defined( 'ABSPATH' ) ) { exit; }
+
+define( 'CK_IG_VERSI', '1.0.0' );
+define( 'CK_IG_GRAPH', 'v26.0' );
+
+function ck_ig_token() {
+	if ( function_exists( 'ck_fb_token' ) ) {
+		$t = ck_fb_token();
+		if ( is_string( $t ) && strlen( $t ) > 50 ) { return $t; }
+	}
+	return trim( (string) get_option( 'ck_fb_token', '' ) );
+}
+
+function ck_ig_samar( $data ) {
+	$json = wp_json_encode( $data );
+	$json = preg_replace( '/access_token=[^&"\\\\]+/', 'access_token=***', $json );
+	$tok  = ck_ig_token();
+	if ( $tok ) { $json = str_replace( $tok, '***', $json ); }
+	return json_decode( $json, true );
+}
+
+function ck_ig_graph( $metode, $jalur, $param = array(), $waktu = 45 ) {
+	$tok = ck_ig_token();
+	if ( '' === $tok ) { return new WP_Error( 'ck_ig_token', 'Token Halaman kosong.', array( 'status' => 500 ) ); }
+	$url = 'https://graph.facebook.com/' . CK_IG_GRAPH . '/' . ltrim( $jalur, '/' );
+	$param['access_token'] = $tok;
+	$r = ( 'GET' === $metode )
+		? wp_remote_get( add_query_arg( $param, $url ), array( 'timeout' => $waktu ) )
+		: wp_remote_post( $url, array( 'timeout' => $waktu, 'body' => $param ) );
+	if ( is_wp_error( $r ) ) { return $r; }
+	$kode = wp_remote_retrieve_response_code( $r );
+	$isi  = json_decode( wp_remote_retrieve_body( $r ), true );
+	if ( $kode >= 400 || isset( $isi['error'] ) ) {
+		return new WP_Error( 'ck_ig_graph', 'Graph menolak', array( 'status' => 502, 'graph' => ck_ig_samar( $isi ), 'http' => $kode ) );
+	}
+	return $isi;
+}
+
+function ck_ig_page_id() {
+	if ( function_exists( 'ck_fb_page_id' ) ) { $p = (string) ck_fb_page_id(); if ( '' !== $p ) { return $p; } }
+	return trim( (string) get_option( 'ck_fb_page_id', '' ) );
+}
+
+/* ID akun Instagram profesional yang tertaut ke Halaman; disimpan di opsi agar tidak ditanya tiap kali. */
+function ck_ig_akun_id( $segar = false ) {
+	$id = get_option( 'ck_ig_akun_id', '' );
+	if ( $id && ! $segar ) { return $id; }
+	$page = ck_ig_page_id();
+	if ( '' === $page ) { return new WP_Error( 'ck_ig_page', 'page_id kosong.' ); }
+	$r = ck_ig_graph( 'GET', $page, array( 'fields' => 'instagram_business_account' ), 20 );
+	if ( is_wp_error( $r ) ) { return $r; }
+	if ( empty( $r['instagram_business_account']['id'] ) ) {
+		return new WP_Error( 'ck_ig_tautan', 'Halaman belum tertaut ke akun Instagram profesional, atau token belum membawa izin instagram_basic.', array( 'status' => 409 ) );
+	}
+	$id = (string) $r['instagram_business_account']['id'];
+	update_option( 'ck_ig_akun_id', $id, false );
+	return $id;
+}
+
+function ck_ig_log( $baris ) {
+	$log = get_option( 'ck_ig_log', array() );
+	if ( ! is_array( $log ) ) { $log = array(); }
+	array_unshift( $log, array_merge( array( 'waktu' => current_time( 'mysql' ) ), $baris ) );
+	update_option( 'ck_ig_log', array_slice( $log, 0, 50 ), false );
+}
+
+/* Buat kontainer lalu terbitkan. $isi: image_url | video_url(+media_type REELS), caption. */
+function ck_ig_terbitkan_sekarang( $isi ) {
+	$ig = ck_ig_akun_id();
+	if ( is_wp_error( $ig ) ) { return $ig; }
+	$k = ck_ig_graph( 'POST', $ig . '/media', $isi, 60 );
+	if ( is_wp_error( $k ) ) { ck_ig_log( array( 'tahap' => 'kontainer', 'galat' => $k->get_error_data() ) ); return $k; }
+	$cid = isset( $k['id'] ) ? $k['id'] : '';
+	if ( ! $cid ) { return new WP_Error( 'ck_ig_kontainer', 'Tidak dapat id kontainer', array( 'status' => 502, 'graph' => ck_ig_samar( $k ) ) ); }
+	// Video butuh waktu diproses: tunggu sampai FINISHED (maks ±50 detik), kalau belum, kembalikan id kontainer.
+	$video = isset( $isi['media_type'] ) && 'REELS' === $isi['media_type'];
+	$status = 'FINISHED';
+	if ( $video ) {
+		for ( $i = 0; $i < 10; $i++ ) {
+			sleep( 5 );
+			$s = ck_ig_graph( 'GET', $cid, array( 'fields' => 'status_code,status' ), 20 );
+			$status = is_wp_error( $s ) ? 'IN_PROGRESS' : ( isset( $s['status_code'] ) ? $s['status_code'] : 'IN_PROGRESS' );
+			if ( 'FINISHED' === $status || 'ERROR' === $status ) { break; }
+		}
+		if ( 'ERROR' === $status ) {
+			ck_ig_log( array( 'tahap' => 'proses', 'kontainer' => $cid, 'galat' => ck_ig_samar( $s ) ) );
+			return new WP_Error( 'ck_ig_proses', 'Instagram gagal memproses video', array( 'status' => 502, 'kontainer' => $cid, 'graph' => ck_ig_samar( $s ) ) );
+		}
+		if ( 'FINISHED' !== $status ) {
+			ck_ig_log( array( 'tahap' => 'menunggu', 'kontainer' => $cid ) );
+			return array( 'ok' => true, 'status' => 'menunggu', 'kontainer' => $cid, 'catatan' => 'Panggil POST /ck/v1/ig-terbitkan dengan id kontainer ini sesudah status FINISHED.' );
+		}
+	}
+	$p = ck_ig_graph( 'POST', $ig . '/media_publish', array( 'creation_id' => $cid ), 45 );
+	if ( is_wp_error( $p ) ) { ck_ig_log( array( 'tahap' => 'terbit', 'kontainer' => $cid, 'galat' => $p->get_error_data() ) ); return $p; }
+	$mid = isset( $p['id'] ) ? $p['id'] : '';
+	$m = $mid ? ck_ig_graph( 'GET', $mid, array( 'fields' => 'id,permalink,media_type,timestamp' ), 20 ) : null;
+	ck_ig_log( array( 'tahap' => 'terbit', 'media_id' => $mid, 'kontainer' => $cid, 'jenis' => $video ? 'reels' : 'foto' ) );
+	return array( 'ok' => true, 'status' => 'terbit', 'media_id' => $mid, 'kontainer' => $cid, 'media' => is_wp_error( $m ) ? null : $m );
+}
+
+/* Penjadwalan lewat WP-Cron (Instagram API tidak punya jadwal sendiri). */
+add_action( 'ck_ig_jadwal_terbit', function ( $isi ) {
+	$hasil = ck_ig_terbitkan_sekarang( $isi );
+	if ( is_wp_error( $hasil ) ) { ck_ig_log( array( 'tahap' => 'cron', 'galat' => $hasil->get_error_data() ) ); }
+	elseif ( isset( $hasil['status'] ) && 'menunggu' === $hasil['status'] ) {
+		wp_schedule_single_event( time() + 120, 'ck_ig_terbitkan_kontainer', array( $hasil['kontainer'], 0 ) );
+	}
+}, 10, 1 );
+
+add_action( 'ck_ig_terbitkan_kontainer', function ( $cid, $coba ) {
+	$ig = ck_ig_akun_id();
+	if ( is_wp_error( $ig ) ) { return; }
+	$s = ck_ig_graph( 'GET', $cid, array( 'fields' => 'status_code' ), 20 );
+	$status = is_wp_error( $s ) ? 'IN_PROGRESS' : ( isset( $s['status_code'] ) ? $s['status_code'] : 'IN_PROGRESS' );
+	if ( 'FINISHED' === $status ) {
+		$p = ck_ig_graph( 'POST', $ig . '/media_publish', array( 'creation_id' => $cid ), 45 );
+		ck_ig_log( array( 'tahap' => 'cron-terbit', 'kontainer' => $cid, 'hasil' => is_wp_error( $p ) ? $p->get_error_data() : $p ) );
+	} elseif ( 'ERROR' !== $status && $coba < 10 ) {
+		wp_schedule_single_event( time() + 120, 'ck_ig_terbitkan_kontainer', array( $cid, $coba + 1 ) );
+	} else {
+		ck_ig_log( array( 'tahap' => 'cron-gagal', 'kontainer' => $cid, 'status' => $status ) );
+	}
+}, 10, 2 );
+
+function ck_ig_jadwal_atau_kirim( $isi, $jadwal ) {
+	if ( '' !== $jadwal ) {
+		$t = strtotime( $jadwal );
+		$sel = $t - time();
+		if ( ! $t || $sel < 300 || $sel > 180 * DAY_IN_SECONDS ) {
+			return new WP_Error( 'ck_ig_jadwal', 'Jadwal harus 5 menit sampai 180 hari ke depan (ISO 8601).', array( 'status' => 400 ) );
+		}
+		wp_schedule_single_event( $t, 'ck_ig_jadwal_terbit', array( $isi ) );
+		ck_ig_log( array( 'tahap' => 'terjadwal', 'pada' => gmdate( 'c', $t ), 'jenis' => isset( $isi['media_type'] ) ? 'reels' : 'foto', 'cuplik' => mb_substr( (string) $isi['caption'], 0, 80 ) ) );
+		return array( 'ok' => true, 'status' => 'terjadwal', 'jadwal' => gmdate( 'c', $t ), 'catatan' => 'Diterbitkan WP-Cron; cek /ck/v1/ig-daftar sesudah jamnya.' );
+	}
+	return ck_ig_terbitkan_sekarang( $isi );
+}
+
+add_action( 'rest_api_init', function () {
+	$izin = function () { return current_user_can( 'manage_options' ); };
+
+	register_rest_route( 'ck/v1', '/ig-info', array( 'methods' => 'GET', 'permission_callback' => $izin, 'callback' => function ( WP_REST_Request $q ) {
+		$ig = ck_ig_akun_id( (bool) $q->get_param( 'segar' ) );
+		$akun = is_wp_error( $ig ) ? null : ck_ig_graph( 'GET', $ig, array( 'fields' => 'id,username,name,followers_count,media_count' ), 20 );
+		$batas = is_wp_error( $ig ) ? null : ck_ig_graph( 'GET', $ig . '/content_publishing_limit', array( 'fields' => 'quota_usage,config' ), 20 );
+		return array(
+			'versi' => CK_IG_VERSI, 'graph' => CK_IG_GRAPH,
+			'token_terisi' => '' !== ck_ig_token(),
+			'akun' => is_wp_error( $akun ) || null === $akun ? null : $akun,
+			'batas_harian' => is_wp_error( $batas ) || null === $batas ? null : $batas,
+			'galat' => is_wp_error( $ig ) ? $ig->get_error_message() : ( is_wp_error( $akun ) ? $akun->get_error_data() : null ),
+			'siap' => ! is_wp_error( $ig ) && ! is_wp_error( $akun ) && ! empty( $akun['id'] ),
+			'log' => array_slice( (array) get_option( 'ck_ig_log', array() ), 0, 10 ),
+		);
+	} ) );
+
+	register_rest_route( 'ck/v1', '/ig-kirim', array( 'methods' => 'POST', 'permission_callback' => $izin, 'callback' => function ( WP_REST_Request $q ) {
+		$g = esc_url_raw( (string) $q->get_param( 'gambar' ) );
+		if ( ! $g || 0 !== strpos( $g, 'https://' ) ) { return new WP_Error( 'ck_ig_gambar', 'Parameter gambar wajib URL https publik ke JPEG.', array( 'status' => 400 ) ); }
+		$isi = array( 'image_url' => $g, 'caption' => (string) $q->get_param( 'keterangan' ) );
+		return ck_ig_jadwal_atau_kirim( $isi, (string) $q->get_param( 'jadwal' ) );
+	} ) );
+
+	register_rest_route( 'ck/v1', '/ig-reel', array( 'methods' => 'POST', 'permission_callback' => $izin, 'callback' => function ( WP_REST_Request $q ) {
+		$v = esc_url_raw( (string) $q->get_param( 'video' ) );
+		if ( ! $v || 0 !== strpos( $v, 'https://' ) ) { return new WP_Error( 'ck_ig_video', 'Parameter video wajib URL https publik ke MP4.', array( 'status' => 400 ) ); }
+		$isi = array( 'media_type' => 'REELS', 'video_url' => $v, 'caption' => (string) $q->get_param( 'keterangan' ),
+			'share_to_feed' => ( null === $q->get_param( 'bagikan_feed' ) ) ? 'true' : ( $q->get_param( 'bagikan_feed' ) ? 'true' : 'false' ) );
+		return ck_ig_jadwal_atau_kirim( $isi, (string) $q->get_param( 'jadwal' ) );
+	} ) );
+
+	register_rest_route( 'ck/v1', '/ig-status', array( 'methods' => 'GET', 'permission_callback' => $izin, 'callback' => function ( WP_REST_Request $q ) {
+		$id = preg_replace( '/[^0-9]/', '', (string) $q->get_param( 'id' ) );
+		if ( ! $id ) { return new WP_Error( 'ck_ig_id', 'Parameter id wajib.', array( 'status' => 400 ) ); }
+		$r = ck_ig_graph( 'GET', $id, array( 'fields' => 'status_code,status' ), 20 );
+		return is_wp_error( $r ) ? $r : ck_ig_samar( $r );
+	} ) );
+
+	register_rest_route( 'ck/v1', '/ig-terbitkan', array( 'methods' => 'POST', 'permission_callback' => $izin, 'callback' => function ( WP_REST_Request $q ) {
+		$cid = preg_replace( '/[^0-9]/', '', (string) $q->get_param( 'id' ) );
+		if ( ! $cid ) { return new WP_Error( 'ck_ig_id', 'Parameter id (kontainer) wajib.', array( 'status' => 400 ) ); }
+		$ig = ck_ig_akun_id(); if ( is_wp_error( $ig ) ) { return $ig; }
+		$p = ck_ig_graph( 'POST', $ig . '/media_publish', array( 'creation_id' => $cid ), 45 );
+		if ( is_wp_error( $p ) ) { return $p; }
+		ck_ig_log( array( 'tahap' => 'terbit-manual', 'kontainer' => $cid, 'media_id' => isset( $p['id'] ) ? $p['id'] : '' ) );
+		return array( 'ok' => true, 'media_id' => isset( $p['id'] ) ? $p['id'] : '' );
+	} ) );
+
+	register_rest_route( 'ck/v1', '/ig-daftar', array( 'methods' => 'GET', 'permission_callback' => $izin, 'callback' => function ( WP_REST_Request $q ) {
+		$ig = ck_ig_akun_id(); if ( is_wp_error( $ig ) ) { return $ig; }
+		$n = max( 1, min( 25, (int) $q->get_param( 'jumlah' ) ?: 10 ) );
+		$r = ck_ig_graph( 'GET', $ig . '/media', array( 'fields' => 'id,media_type,caption,permalink,timestamp,like_count,comments_count', 'limit' => $n ), 20 );
+		if ( is_wp_error( $r ) ) { return $r; }
+		return array( 'ok' => true, 'media' => isset( $r['data'] ) ? $r['data'] : array(), 'catatan' => array_slice( (array) get_option( 'ck_ig_log', array() ), 0, 10 ) );
+	} ) );
+} );
