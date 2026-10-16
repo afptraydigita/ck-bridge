@@ -179,6 +179,79 @@ def sampul(o):
 TEMPLAT["sampul"] = sampul
 
 
+
+
+def tiktok(o):
+    """Tiruan persis kartu TikTok @cekricekid (rujukan AFP 16 Okt 2026, 20.49: "tiru persis, kecuali logo"):
+    foto penuh melebur ke biru malam; garis tipis di kiri judul+deskripsi; judul Poppins tebal putih dengan
+    kata sorot oranye; deskripsi Poppins reguler putih; empat titik; pil toska "www.cekricek.id" dengan ikon
+    lup (kaca pembesar) dalam lingkaran oranye; garis kiri oranye rata huruf. Dipakai untuk TikTok, Facebook, dan Instagram (frame 1080x1350, 4:5).
+    Ruas: foto, fokus, judul (*sorot*), ringkas, kredit (opsional, kecil di kanan bawah)."""
+    im = Image.new("RGB", (W, H), K.MALAM)
+    FH = 900
+    f = K.hangatkan(K.foto_pas(o["foto"], W, FH, o.get("fokus", 0.5)), 1.03)
+    im.paste(f, (0, 0))
+    K.gradasi_atas(im, 140, K.MALAM, 120)
+    K.gradasi_bawah(im, 420, FH - 420, K.MALAM, kurva=1.25, puncak=255)
+    d = ImageDraw.Draw(im, "RGBA")
+    lg = K.wordmark(60, "putih"); im.paste(lg, (TEPI - 6, 56), lg)
+    X = 112                      # teks mulai di sini; garis tipis di X-30
+    maxw = W - X - TEPI + 10
+    toks = K.tokens(o["judul"])
+    ft, ft2, b, sz = K.pas(d, toks, maxw, 3, 66, 48, "sans", "extrabold" if K._cari("Poppins-ExtraBold.ttf") else "bold", None)
+    ft2 = ft
+    lh = int(sz * 1.12)
+    fr = K.font("regular", 29)
+    rb = K.bungkus_teks(d, o.get("ringkas", ""), fr, maxw)
+    if len(rb) > 5:
+        print("PERINGATAN: ringkas terpotong, lebih dari 5 baris", file=sys.stderr); rb = rb[:5]
+    lhr = 40
+    tinggi = len(b) * lh + 22 + len(rb) * lhr
+    y0 = H - 262 - tinggi
+    # garis tipis kiri (putih keabuan) sepanjang judul + deskripsi
+    y = K.tulis(d, b, ft, X, y0, lh, K.PUTIH, K.ORANYE, ft2)
+    yy = y + 22
+    for s_ in rb:
+        d.text((X, yy), s_, font=fr, fill=K.PUTIH); yy += lhr
+    # garis kiri: warna sama dengan sorot judul (oranye/kuning), rata dengan puncak huruf judul
+    # dan dasar huruf baris terakhir deskripsi (koreksi AFP 16 Okt 2026, 21.00)
+    atas_huruf = y0 + ft.getbbox("H")[1]
+    terakhir = rb[-1] if rb else b[-1]
+    f_ter = fr if rb else ft
+    bawah_huruf = (yy - lhr if rb else y - lh) + f_ter.getbbox("H")[3]  # garis dasar huruf (tanpa ekor p/g)
+    d.rectangle([X - 30, atas_huruf, X - 26, bawah_huruf], fill=K.ORANYE)
+    # empat titik
+    cy = H - 212; r = 7; jar = 26; cx0 = W // 2 - 1.5 * jar
+    for k in range(4):
+        d.ellipse([cx0 + k * jar - r, cy - r, cx0 + k * jar + r, cy + r], fill=K.PUTIH)
+    # pil toska www.cekricek.id + ikon hati dalam lingkaran oranye
+    TOSKA = (23, 196, 200)
+    fp = K.font("bold", 30)
+    teks = "www.cekricek.id"
+    tw = d.textlength(teks, font=fp)
+    ph = 86; pw = int(tw + 64 + 86)
+    px = (W - pw) // 2; py = H - 180
+    d.rounded_rectangle([px, py, px + pw, py + ph], ph // 2, fill=TOSKA)
+    d.text((px + 34, py + (ph - 36) // 2), teks, font=fp, fill=K.PUTIH)
+    ccx = px + pw - 52; ccy = py + ph // 2; cr = 29
+    d.ellipse([ccx - cr, ccy - cr, ccx + cr, ccy + cr], fill=K.ORANYE)
+    _lup(d, ccx, ccy, 11, K.PUTIH)
+    if o.get("kredit"):
+        fk = K.font("light", 18)
+        d.text((W - TEPI - d.textlength(o["kredit"], font=fk), H - 48), o["kredit"], font=fk, fill=(150, 168, 184))
+    return im
+
+
+def _lup(d, cx, cy, r, warna):
+    """Ikon kaca pembesar (lup, lambang pencarian): cincin + gagang miring ke kanan bawah."""
+    ox, oy = cx - 3, cy - 3
+    d.ellipse([ox - r, oy - r, ox + r, oy + r], outline=warna, width=5)
+    d.line([(ox + r * 0.72, oy + r * 0.72), (cx + 11, cy + 11)], fill=warna, width=6)
+
+
+TEMPLAT["tiktok"] = tiktok
+
+
 if __name__ == "__main__":
     o = json.load(open(sys.argv[1], encoding="utf-8"))
     print(buat(o, sys.argv[2]))

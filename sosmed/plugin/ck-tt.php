@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CK TT (Jembatan TikTok)
  * Description: Menerbitkan video Reels Cekricek.id ke TikTok @cekricekid lewat TikTok Content Posting API (Direct Post, FILE_UPLOAD). Rute REST ck/v1 untuk CK Agen. Pendamping ck-fb.php dan ck-ig.php.
- * Version: 1.1.1
+ * Version: 1.2.0
  * Author: Redaksi Cekricek.id
  *
  * Pengaturan: Pengaturan > Jembatan TikTok (options-general.php?page=ck-tt): Client Key, Client Secret (tidak
@@ -13,7 +13,9 @@
  *   GET  /ck/v1/tt-info                      akun (open_id, nama), masa token, privasi yang diizinkan, siap/tidak
  *   POST /ck/v1/tt-kirim                     video (URL https MP4 publik), judul (caption, <= 2200 karakter),
  *                                            privasi (SELF_ONLY | PUBLIC_TO_EVERYONE | MUTUAL_FOLLOW_FRIENDS | FOLLOWER_OF_CREATOR),
- *                                            jadwal (ISO, opsional; dijalankan WP-Cron)
+ *                                            jadwal (ISO, opsional; dijalankan WP-Cron), mode draf|langsung (bawaan draf = Upload to TikTok,
+ *                                            masuk kotak masuk aplikasi; sound dipilih dan diterbitkan AFP di aplikasi)
+ *   POST /ck/v1/tt-foto   {foto:[URL https di domain terverifikasi], judul, keterangan, mode draf|langsung, privasi, sampul_indeks, jadwal}
  *   GET  /ck/v1/tt-status?id=PUBLISH_ID      status penerbitan (PROCESSING_UPLOAD / PUBLISH_COMPLETE / FAILED)
  *
  * Catatan audit: sebelum aplikasi lolos audit TikTok, hanya privasi SELF_ONLY yang diizinkan (video tidak tampil publik).
@@ -22,7 +24,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-define( 'CK_TT_VERSI', '1.1.1' );
+define( 'CK_TT_VERSI', '1.2.0' );
 define( 'CK_TT_API', 'https://open.tiktokapis.com/v2/' );
 define( 'CK_TT_SCOPE', 'user.info.basic,video.publish,video.upload' );
 
@@ -251,22 +253,25 @@ function ck_tt_terbitkan_sekarang( $isi ) {
 	// satu potongan bila <= 64 MB (TikTok: potongan 5–64 MB; berkas < 5 MB tetap satu potongan)
 	$chunk = min( $ukuran, 64 * 1024 * 1024 );
 	$jumlah = (int) ceil( $ukuran / $chunk );
-	$init = ck_tt_api( 'POST', 'post/publish/video/init/', array(
-		'post_info' => array(
-			'title'                    => mb_substr( (string) $isi['judul'], 0, 2200 ),
-			'privacy_level'            => $isi['privasi'],
-			'disable_duet'             => false,
-			'disable_comment'          => false,
-			'disable_stitch'           => false,
-			'video_cover_timestamp_ms' => (int) ( $isi['sampul_ms'] ?? 1000 ),
-		),
+	$draf = ( $isi['mode'] ?? 'langsung' ) === 'draf';
+	$badan_init = array(
 		'source_info' => array(
 			'source'            => 'FILE_UPLOAD',
 			'video_size'        => $ukuran,
 			'chunk_size'        => $chunk,
 			'total_chunk_count' => $jumlah,
 		),
-	), 45 );
+	);
+	if ( ! $draf ) { $badan_init['post_info'] = array(
+			'title'                    => mb_substr( (string) $isi['judul'], 0, 2200 ),
+			'privacy_level'            => $isi['privasi'],
+			'disable_duet'             => false,
+			'disable_comment'          => false,
+			'disable_stitch'           => false,
+			'video_cover_timestamp_ms' => (int) ( $isi['sampul_ms'] ?? 1000 ),
+		); }
+	// draf = "Upload to TikTok": video masuk kotak masuk aplikasi; sound dipilih dan diterbitkan oleh AFP di aplikasi (ketetapan 16 Okt 20.41)
+	$init = ck_tt_api( 'POST', $draf ? 'post/publish/inbox/video/init/' : 'post/publish/video/init/', $badan_init, 45 );
 	if ( is_wp_error( $init ) ) { @unlink( $tmp ); ck_tt_log( array( 'tahap' => 'init', 'galat' => $init->get_error_data() ) ); return $init; }
 	$publish_id = $init['data']['publish_id'] ?? ''; $upload_url = $init['data']['upload_url'] ?? '';
 	if ( ! $publish_id || ! $upload_url ) { @unlink( $tmp ); return new WP_Error( 'ck_tt_init', 'Tidak dapat publish_id/upload_url', array( 'status' => 422, 'tiktok' => ck_tt_samar( $init ) ) ); }
@@ -287,12 +292,31 @@ function ck_tt_terbitkan_sekarang( $isi ) {
 	}
 	fclose( $fh ); @unlink( $tmp );
 	if ( $galat ) { ck_tt_log( array( 'tahap' => 'unggah', 'publish_id' => $publish_id, 'galat' => $galat ) ); return new WP_Error( 'ck_tt_unggah', 'Unggah ke TikTok gagal: ' . $galat, array( 'status' => 422, 'publish_id' => $publish_id ) ); }
-	ck_tt_log( array( 'tahap' => 'terkirim', 'publish_id' => $publish_id, 'privasi' => $isi['privasi'], 'ukuran' => $ukuran ) );
-	return array( 'ok' => true, 'status' => 'diproses', 'publish_id' => $publish_id, 'catatan' => 'Cek /ck/v1/tt-status?id=' . $publish_id );
+	ck_tt_log( array( 'tahap' => $draf ? 'draf-terkirim' : 'terkirim', 'publish_id' => $publish_id, 'privasi' => $draf ? 'draf' : $isi['privasi'], 'ukuran' => $ukuran ) );
+	return array( 'ok' => true, 'status' => $draf ? 'draf-diproses' : 'diproses', 'publish_id' => $publish_id, 'catatan' => 'Cek /ck/v1/tt-status?id=' . $publish_id );
+}
+
+/* ---------- Foto/kartu: PULL_FROM_URL (domain harus terverifikasi di aplikasi TikTok), draf ke kotak masuk atau langsung ---------- */
+function ck_tt_foto_sekarang( $isi ) {
+	if ( ! ck_tt_pastikan_token() ) { return new WP_Error( 'ck_tt_tautan', 'Belum terhubung ke TikTok (Pengaturan > Jembatan TikTok).', array( 'status' => 409 ) ); }
+	$draf = ( $isi['mode'] ?? 'draf' ) === 'draf';
+	$post_info = array( 'title' => mb_substr( (string) ( $isi['judul'] ?? '' ), 0, 90 ), 'description' => mb_substr( (string) ( $isi['keterangan'] ?? '' ), 0, 4000 ) );
+	if ( ! $draf ) { $post_info['privacy_level'] = $isi['privasi'] ?? 'SELF_ONLY'; $post_info['disable_comment'] = false; $post_info['auto_add_music'] = true; }
+	$badan = array(
+		'post_info'   => $post_info,
+		'source_info' => array( 'source' => 'PULL_FROM_URL', 'photo_cover_index' => (int) ( $isi['sampul_indeks'] ?? 0 ), 'photo_images' => array_values( $isi['foto'] ) ),
+		'post_mode'   => $draf ? 'MEDIA_UPLOAD' : 'DIRECT_POST',
+		'media_type'  => 'PHOTO',
+	);
+	$r = ck_tt_api( 'POST', 'post/publish/content/init/', $badan, 45 );
+	if ( is_wp_error( $r ) ) { ck_tt_log( array( 'tahap' => 'foto-init', 'galat' => $r->get_error_data() ) ); return $r; }
+	$publish_id = $r['data']['publish_id'] ?? '';
+	ck_tt_log( array( 'tahap' => $draf ? 'foto-draf-terkirim' : 'foto-terkirim', 'publish_id' => $publish_id, 'jumlah' => count( $isi['foto'] ) ) );
+	return array( 'ok' => true, 'status' => $draf ? 'draf-diproses' : 'diproses', 'publish_id' => $publish_id, 'catatan' => 'Cek /ck/v1/tt-status?id=' . $publish_id );
 }
 
 add_action( 'ck_tt_jadwal_terbit', function ( $isi ) {
-	$h = ck_tt_terbitkan_sekarang( $isi );
+	$h = ( $isi['jenis'] ?? 'video' ) === 'foto' ? ck_tt_foto_sekarang( $isi ) : ck_tt_terbitkan_sekarang( $isi );
 	if ( is_wp_error( $h ) ) { ck_tt_log( array( 'tahap' => 'cron', 'galat' => $h->get_error_data() ) ); }
 }, 10, 1 );
 
@@ -325,7 +349,9 @@ add_action( 'rest_api_init', function () {
 		if ( ! $v || 0 !== strpos( $v, 'https://' ) ) { return new WP_Error( 'ck_tt_video', 'Parameter video wajib URL https publik ke MP4.', array( 'status' => 400 ) ); }
 		$privasi = strtoupper( (string) ( $q->get_param( 'privasi' ) ?: 'SELF_ONLY' ) );
 		if ( ! in_array( $privasi, array( 'SELF_ONLY', 'PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'FOLLOWER_OF_CREATOR' ), true ) ) { return new WP_Error( 'ck_tt_privasi', 'privasi tidak dikenal.', array( 'status' => 400 ) ); }
-		$isi = array( 'video' => $v, 'judul' => (string) $q->get_param( 'judul' ), 'privasi' => $privasi, 'sampul_ms' => (int) ( $q->get_param( 'sampul_ms' ) ?: 1000 ) );
+		$mode = (string) ( $q->get_param( 'mode' ) ?: 'draf' ); // draf (bawaan, ketetapan AFP 16 Okt 20.41) | langsung
+		if ( ! in_array( $mode, array( 'draf', 'langsung' ), true ) ) { return new WP_Error( 'ck_tt_mode', 'mode harus draf atau langsung.', array( 'status' => 400 ) ); }
+		$isi = array( 'jenis' => 'video', 'mode' => $mode, 'video' => $v, 'judul' => (string) $q->get_param( 'judul' ), 'privasi' => $privasi, 'sampul_ms' => (int) ( $q->get_param( 'sampul_ms' ) ?: 1000 ) );
 		$jadwal = (string) $q->get_param( 'jadwal' );
 		if ( '' !== $jadwal ) {
 			$t = strtotime( $jadwal ); $sel = $t - time();
@@ -335,6 +361,25 @@ add_action( 'rest_api_init', function () {
 			return array( 'ok' => true, 'status' => 'terjadwal', 'jadwal' => gmdate( 'c', $t ) );
 		}
 		return ck_tt_terbitkan_sekarang( $isi );
+	} ) );
+
+	register_rest_route( 'ck/v1', '/tt-foto', array( 'methods' => 'POST', 'permission_callback' => $izin, 'callback' => function ( WP_REST_Request $q ) {
+		$foto = (array) $q->get_param( 'foto' );
+		$foto = array_values( array_filter( array_map( 'esc_url_raw', $foto ), function ( $u ) { return 0 === strpos( $u, 'https://' ); } ) );
+		if ( ! $foto || count( $foto ) > 35 ) { return new WP_Error( 'ck_tt_foto', 'Parameter foto wajib larik 1–35 URL https (domain terverifikasi di aplikasi TikTok, mis. cekricek.id).', array( 'status' => 400 ) ); }
+		$mode = (string) ( $q->get_param( 'mode' ) ?: 'draf' );
+		if ( ! in_array( $mode, array( 'draf', 'langsung' ), true ) ) { return new WP_Error( 'ck_tt_mode', 'mode harus draf atau langsung.', array( 'status' => 400 ) ); }
+		$privasi = strtoupper( (string) ( $q->get_param( 'privasi' ) ?: 'SELF_ONLY' ) );
+		$isi = array( 'jenis' => 'foto', 'mode' => $mode, 'foto' => $foto, 'judul' => (string) $q->get_param( 'judul' ), 'keterangan' => (string) $q->get_param( 'keterangan' ), 'privasi' => $privasi, 'sampul_indeks' => (int) $q->get_param( 'sampul_indeks' ) );
+		$jadwal = (string) $q->get_param( 'jadwal' );
+		if ( '' !== $jadwal ) {
+			$t = strtotime( $jadwal ); $sel = $t - time();
+			if ( ! $t || $sel < 300 || $sel > 180 * DAY_IN_SECONDS ) { return new WP_Error( 'ck_tt_jadwal', 'Jadwal harus 5 menit sampai 180 hari ke depan (ISO 8601).', array( 'status' => 400 ) ); }
+			wp_schedule_single_event( $t, 'ck_tt_jadwal_terbit', array( $isi ) );
+			ck_tt_log( array( 'tahap' => 'foto-terjadwal', 'pada' => gmdate( 'c', $t ), 'cuplik' => mb_substr( $isi['judul'], 0, 80 ) ) );
+			return array( 'ok' => true, 'status' => 'terjadwal', 'jadwal' => gmdate( 'c', $t ) );
+		}
+		return ck_tt_foto_sekarang( $isi );
 	} ) );
 
 	register_rest_route( 'ck/v1', '/tt-status', array( 'methods' => 'GET', 'permission_callback' => $izin, 'callback' => function ( WP_REST_Request $q ) {

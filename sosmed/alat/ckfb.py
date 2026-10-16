@@ -21,7 +21,7 @@ KRIM   = (246, 241, 232)
 
 _ASET = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "aset")
 _FONT_DIRS = [os.path.join(_ASET, "font"), "/usr/share/fonts/truetype/google-fonts", os.path.expanduser("~/.fonts")]
-_SANS = {"bold": "Poppins-Bold.ttf", "medium": "Poppins-Medium.ttf", "regular": "Poppins-Regular.ttf",
+_SANS = {"bold": "Poppins-Bold.ttf", "extrabold": "Poppins-ExtraBold.ttf", "medium": "Poppins-Medium.ttf", "regular": "Poppins-Regular.ttf",
          "light": "Poppins-Light.ttf", "italic": "Poppins-Italic.ttf"}
 _SERIF = {"bold": ("Lora-Variable.ttf", "Bold"), "semibold": ("Lora-Variable.ttf", "SemiBold"),
           "regular": ("Lora-Variable.ttf", "Regular"), "italic": ("Lora-Italic-Variable.ttf", "Italic"),
