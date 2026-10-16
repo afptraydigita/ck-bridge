@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CK TT (Jembatan TikTok)
  * Description: Menerbitkan video Reels Cekricek.id ke TikTok @cekricekid lewat TikTok Content Posting API (Direct Post, FILE_UPLOAD). Rute REST ck/v1 untuk CK Agen. Pendamping ck-fb.php dan ck-ig.php.
- * Version: 1.1.0
+ * Version: 1.1.1
  * Author: Redaksi Cekricek.id
  *
  * Pengaturan: Pengaturan > Jembatan TikTok (options-general.php?page=ck-tt): Client Key, Client Secret (tidak
@@ -22,7 +22,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-define( 'CK_TT_VERSI', '1.1.0' );
+define( 'CK_TT_VERSI', '1.1.1' );
 define( 'CK_TT_API', 'https://open.tiktokapis.com/v2/' );
 define( 'CK_TT_SCOPE', 'user.info.basic,video.publish,video.upload' );
 
@@ -204,6 +204,7 @@ function ck_tt_halaman_pengaturan() {
 	echo '<div class="wrap"><h1>Jembatan TikTok v' . esc_html( CK_TT_VERSI ) . '</h1>';
 	if ( $pesan && isset( $peta[ $pesan ] ) ) { echo '<div class="notice notice-info"><p>' . $peta[ $pesan ] . '</p></div>'; }
 	echo '<p>TikTok Content Posting API (Direct Post). Di developers.tiktok.com → aplikasi → Login Kit, daftarkan Redirect URI persis (tanpa query string): <code>' . esc_html( ck_tt_redirect_oauth() ) . '</code>. Scope: <code>' . esc_html( CK_TT_SCOPE ) . '</code>. Sebelum aplikasi lolos audit, video hanya bisa berprivasi "hanya saya".</p>';
+	echo '<p><strong>Setelah audit TikTok lolos:</strong> ganti Client Key dengan kunci <em>produksi</em> <code>awtrwya3cjm4i25f</code> (kunci sandbox diawali <code>sb</code>), tempel Client Secret produksi (developers.tiktok.com → Cekricek.id → tab Production → Credentials), Simpan, lalu klik <em>Hubungkan ulang</em>. Tugas harian baru mencerminkan ke TikTok bila kunci produksi tersambung.</p>';
 	echo '<h2>1. Aplikasi TikTok</h2><form method="post">'; wp_nonce_field( 'ck_tt_simpan' );
 	echo '<table class="form-table"><tr><th>Client Key</th><td><input type="text" name="ck_tt_client_key" value="' . esc_attr( ck_tt_key() ) . '" class="regular-text"></td></tr>';
 	echo '<tr><th>Client Secret</th><td><input type="password" name="ck_tt_client_secret" value="" class="regular-text" autocomplete="new-password"><p class="description">Status: ' . ( ck_tt_secret() ? 'tersimpan' : '<strong>kosong</strong>' ) . '. Kosongkan untuk membiarkan yang ada. Tidak pernah ditampilkan kembali.</p></td></tr></table>';
@@ -313,6 +314,8 @@ add_action( 'rest_api_init', function () {
 			'kreator' => is_wp_error( $kreator ) || null === $kreator ? null : ( $kreator['data'] ?? null ),
 			'galat' => ! $tok ? 'Belum terhubung: Pengaturan > Jembatan TikTok > Hubungkan akun TikTok.' : ( is_wp_error( $kreator ) ? $kreator->get_error_data() : null ),
 			'siap' => $tok && ! is_wp_error( $kreator ) && null !== $kreator && ! empty( $kreator['data'] ),
+			'sandbox' => 0 === strpos( ck_tt_key(), 'sb' ), // kunci sandbox diawali "sb": posting hanya ke akun privat / hanya saya
+			'produksi_siap' => $tok && 0 !== strpos( ck_tt_key(), 'sb' ),
 			'log' => array_slice( (array) get_option( 'ck_tt_log', array() ), 0, 10 ),
 		);
 	} ) );
