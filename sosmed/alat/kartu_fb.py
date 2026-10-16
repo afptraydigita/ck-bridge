@@ -35,11 +35,15 @@ def _judul(d, o, maxw, maxbaris, besar, kecil):
 
 
 def _kaki(d, o, warna_teks, warna_garis):
+    """Kaki: cekricek.id di kiri; kredit foto di kanan, sejajar (koreksi AFP 16 Okt 2026).
+    Teks "Kisah lengkapnya di situs" dihapus atas koreksi AFP 16 Okt 2026."""
     y = H - 70
     d.line([(TEPI, y), (W - TEPI, y)], fill=warna_garis, width=1)
     ft = K.font("medium", 22)
     d.text((TEPI, y + 20), "c e k r i c e k . i d", font=ft, fill=warna_teks)
-    # Teks kaki kanan dihapus atas koreksi AFP 16 Okt 2026 ("tidak perlu").
+    if o.get("kredit"):
+        fk = K.font("light", 19)
+        d.text((W - TEPI - d.textlength(o["kredit"], font=fk), y + 22), o["kredit"], font=fk, fill=warna_teks)
 
 
 def _badan(d, o, y_atas, warna_judul, warna_sorot, warna_ring, maxbaris=6, besar=92):
@@ -69,9 +73,6 @@ def foto(o):
     lg = K.wordmark(58, "putih"); im.paste(lg, (TEPI - 6, 56), lg)
     if o.get("rubrik"):
         K.label(d, W - TEPI - 150, 62, o["rubrik"], K.ORANYE, K.MALAM)
-    if o.get("kredit"):
-        fk = K.font("light", 18)
-        d.text((W - TEPI - d.textlength(o["kredit"], font=fk), FH - 150), o["kredit"], font=fk, fill=(200, 210, 220, 210))
     _badan(d, o, FH - 200, K.PUTIH, K.ORANYE, K.ABU, maxbaris=5, besar=80)
     _kaki(d, o, (150, 168, 184), (60, 78, 96))
     return K.butir(im, 4)
@@ -156,9 +157,6 @@ def sampul(o):
     K.gradasi_bawah(im, 260, FH - 260, K.MALAM, kurva=1.5, puncak=200)
     d = ImageDraw.Draw(im, "RGBA")
     lg = K.wordmark(56, "putih"); im.paste(lg, (TEPI - 6, 52), lg)
-    if o.get("kredit"):
-        fk = K.font("light", 18)
-        d.text((W - TEPI - d.textlength(o["kredit"], font=fk), 70), o["kredit"], font=fk, fill=(230, 236, 242, 220))
     # panel kail
     PX, PW = 44, W - 88
     toks = K.tokens(o["kail"])
@@ -177,9 +175,12 @@ def sampul(o):
     d.rounded_rectangle([PX, py, PX + PW, py + ph], 22, fill=(255, 255, 255, 246))
     d.rectangle([PX, py + 26, PX + 8, py + ph - 26], fill=K.ORANYE)
     K.tulis(d, b, ft, PX + 48, py + 46, lh, K.MALAM, (214, 104, 0), ft2)
-    # kaki di bidang gelap
+    # kaki di bidang gelap: cekricek.id kiri, kredit foto kanan sejajar (koreksi AFP 16 Okt 2026)
     ftk = K.font("medium", 22)
     d.text((TEPI, H - 62), "c e k r i c e k . i d", font=ftk, fill=(150, 168, 184))
+    if o.get("kredit"):
+        fk = K.font("light", 19)
+        d.text((W - TEPI - d.textlength(o["kredit"], font=fk), H - 60), o["kredit"], font=fk, fill=(150, 168, 184))
     return K.butir(im, 3)
 
 
