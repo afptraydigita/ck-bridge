@@ -76,8 +76,7 @@ def _frame_dasar(t, total, naskah):
     d = ImageDraw.Draw(im, "RGBA")
     lg = K.wordmark(54, "putih")
     im.paste(lg, (TEPI - 4, AMAN_ATAS - 130), lg)
-    if naskah.get("rubrik"):
-        K.label(d, W - TEPI - 150, AMAN_ATAS - 124, naskah["rubrik"], K.ORANYE, K.MALAM, 20)
+    # label rubrik DIHAPUS (koreksi AFP 16 Okt 2026, 18.37: berlaku untuk semua konten FB dan IG)
     d.rectangle([TEPI, AMAN_ATAS - 44, W - TEPI, AMAN_ATAS - 41], fill=(255, 255, 255, 50))
     d.rectangle([TEPI, AMAN_ATAS - 44, TEPI + (W - 2 * TEPI) * u, AMAN_ATAS - 41], fill=K.ORANYE)
     if foto and naskah.get("kredit"):
