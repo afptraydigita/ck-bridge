@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CK TT (Jembatan TikTok)
  * Description: Menerbitkan video Reels Cekricek.id ke TikTok @cekricekid lewat TikTok Content Posting API (Direct Post, FILE_UPLOAD). Rute REST ck/v1 untuk CK Agen. Pendamping ck-fb.php dan ck-ig.php.
- * Version: 1.0.1
+ * Version: 1.0.3
  * Author: Redaksi Cekricek.id
  *
  * Pengaturan: Pengaturan > Jembatan TikTok (options-general.php?page=ck-tt): Client Key, Client Secret (tidak
@@ -22,7 +22,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-define( 'CK_TT_VERSI', '1.0.1' );
+define( 'CK_TT_VERSI', '1.0.3' );
 define( 'CK_TT_API', 'https://open.tiktokapis.com/v2/' );
 define( 'CK_TT_SCOPE', 'user.info.basic,video.publish,video.upload' );
 
@@ -66,7 +66,7 @@ function ck_tt_api( $metode, $jalur, $badan = null, $waktu = 45 ) {
 	$isi  = json_decode( wp_remote_retrieve_body( $r ), true );
 	$err  = isset( $isi['error']['code'] ) ? $isi['error']['code'] : 'ok';
 	if ( $kode >= 400 || ( 'ok' !== $err ) ) {
-		return new WP_Error( 'ck_tt_api', 'TikTok menolak', array( 'status' => 502, 'http' => $kode, 'tiktok' => ck_tt_samar( $isi ) ) );
+		return new WP_Error( 'ck_tt_api', 'TikTok menolak', array( 'status' => 422, 'http' => $kode, 'tiktok' => ck_tt_samar( $isi ) ) );
 	}
 	return $isi;
 }
@@ -99,7 +99,7 @@ function ck_tt_tukar_kode( $kode ) {
 	$j = json_decode( wp_remote_retrieve_body( $r ), true );
 	if ( empty( $j['access_token'] ) ) { return new WP_Error( 'ck_tt_oauth', 'Tukar kode gagal', array( 'tiktok' => ck_tt_samar( $j ) ) ); }
 	ck_tt_simpan_token( $j );
-	$me = ck_tt_api( 'GET', 'user/info/?fields=open_id,display_name,username,avatar_url', null, 20 );
+	$me = ck_tt_api( 'GET', 'user/info/?fields=open_id,display_name,avatar_url', null, 20 );
 	if ( ! is_wp_error( $me ) && ! empty( $me['data']['user'] ) ) {
 		update_option( 'ck_tt_akun', $me['data']['user'], false );
 	}
@@ -219,6 +219,7 @@ function ck_tt_halaman_pengaturan() {
 function ck_tt_terbitkan_sekarang( $isi ) {
 	if ( ! ck_tt_pastikan_token() ) { return new WP_Error( 'ck_tt_tautan', 'Belum terhubung ke TikTok (Pengaturan > Jembatan TikTok).', array( 'status' => 409 ) ); }
 	$video = $isi['video'];
+	if ( ! function_exists( 'download_url' ) ) { require_once ABSPATH . 'wp-admin/includes/file.php'; }
 	$tmp = download_url( $video, 120 );
 	if ( is_wp_error( $tmp ) ) { ck_tt_log( array( 'tahap' => 'unduh', 'galat' => $tmp->get_error_message() ) ); return $tmp; }
 	$ukuran = filesize( $tmp );
@@ -244,7 +245,7 @@ function ck_tt_terbitkan_sekarang( $isi ) {
 	), 45 );
 	if ( is_wp_error( $init ) ) { @unlink( $tmp ); ck_tt_log( array( 'tahap' => 'init', 'galat' => $init->get_error_data() ) ); return $init; }
 	$publish_id = $init['data']['publish_id'] ?? ''; $upload_url = $init['data']['upload_url'] ?? '';
-	if ( ! $publish_id || ! $upload_url ) { @unlink( $tmp ); return new WP_Error( 'ck_tt_init', 'Tidak dapat publish_id/upload_url', array( 'status' => 502, 'tiktok' => ck_tt_samar( $init ) ) ); }
+	if ( ! $publish_id || ! $upload_url ) { @unlink( $tmp ); return new WP_Error( 'ck_tt_init', 'Tidak dapat publish_id/upload_url', array( 'status' => 422, 'tiktok' => ck_tt_samar( $init ) ) ); }
 	$fh = fopen( $tmp, 'rb' ); $awal = 0; $galat = null;
 	for ( $i = 0; $i < $jumlah; $i++ ) {
 		$data = fread( $fh, $chunk );
@@ -261,7 +262,7 @@ function ck_tt_terbitkan_sekarang( $isi ) {
 		$awal = $akhir + 1;
 	}
 	fclose( $fh ); @unlink( $tmp );
-	if ( $galat ) { ck_tt_log( array( 'tahap' => 'unggah', 'publish_id' => $publish_id, 'galat' => $galat ) ); return new WP_Error( 'ck_tt_unggah', 'Unggah ke TikTok gagal: ' . $galat, array( 'status' => 502, 'publish_id' => $publish_id ) ); }
+	if ( $galat ) { ck_tt_log( array( 'tahap' => 'unggah', 'publish_id' => $publish_id, 'galat' => $galat ) ); return new WP_Error( 'ck_tt_unggah', 'Unggah ke TikTok gagal: ' . $galat, array( 'status' => 422, 'publish_id' => $publish_id ) ); }
 	ck_tt_log( array( 'tahap' => 'terkirim', 'publish_id' => $publish_id, 'privasi' => $isi['privasi'], 'ukuran' => $ukuran ) );
 	return array( 'ok' => true, 'status' => 'diproses', 'publish_id' => $publish_id, 'catatan' => 'Cek /ck/v1/tt-status?id=' . $publish_id );
 }
