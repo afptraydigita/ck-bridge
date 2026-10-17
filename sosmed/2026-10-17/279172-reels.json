@@ -1,0 +1,68 @@
+{
+ "rubrik": "Nuansa",
+ "gaya": "feature",
+ "judul": "Suku Bajo Sampela Mengajari Anak Melaut *Sejak Umur Lima Tahun*",
+ "foto": "foto/279004.webp",
+ "fokus": 0.5,
+ "kredit": "Foto: BastianKyle/Wikimedia Commons (CC BY-SA 4.0)",
+ "adegan": [
+  {
+   "jenis": "kail",
+   "teks": "Di Bajo Sampela, bayi tiga bulan *dilewatkan di bawah perahu* agar jiwanya menyatu dengan laut",
+   "detik": 5.5,
+   "foto": "foto/bj-wangi.jpg",
+   "fokus": 0.5,
+   "kredit": "Foto: Pambudiyoga/Wikimedia Commons (CC BY-SA 4.0)"
+  },
+  {
+   "jenis": "fakta",
+   "teks": "Orang Sampela menolak menetap di daratan. Laut dipandang *satu-satunya tempat* untuk menetap",
+   "detik": 5.5,
+   "foto": "foto/279004.webp",
+   "fokus": 0.5,
+   "kredit": "Foto: BastianKyle/Wikimedia Commons (CC BY-SA 4.0)"
+  },
+  {
+   "jenis": "fakta",
+   "teks": "Umur lima tahun anak laki-laki mulai *ikut bapak melaut*. Anak perempuan ikut ibu mencari air bersih dan kayu",
+   "detik": 6,
+   "foto": "foto/bj-daily.jpg",
+   "fokus": 0.5,
+   "kredit": "Foto: BastianKyle/Wikimedia Commons (CC BY-SA 4.0)"
+  },
+  {
+   "jenis": "angka",
+   "teks": "1.000",
+   "sub": "meter jaring diturunkan anak dari perahu bapaknya",
+   "detik": 5,
+   "foto": "foto/279004.webp",
+   "fokus": 0.7,
+   "kredit": "Foto: BastianKyle/Wikimedia Commons (CC BY-SA 4.0)"
+  },
+  {
+   "jenis": "fakta",
+   "teks": "Sebelum melaut, para bapak duduk di *kolong rumah*, membicarakan angin dan ombak sambil melihat bintang",
+   "detik": 6,
+   "foto": "foto/bj-mantigola.jpg",
+   "fokus": 0.5,
+   "kredit": "Foto: Wibowo Djatmiko/Wikimedia Commons (CC BY-SA 4.0)"
+  },
+  {
+   "jenis": "kutipan",
+   "teks": "Para orang tua tidak pernah sama sekali membahas tentang pendidikan formal untuk anak-anaknya",
+   "oleh": "Wa Ode Sitti Nurhaliza, Ubhara Jaya",
+   "detik": 6,
+   "foto": "foto/bj-wangi.jpg",
+   "fokus": 0.3,
+   "kredit": "Foto: Pambudiyoga/Wikimedia Commons (CC BY-SA 4.0)"
+  },
+  {
+   "jenis": "penutup",
+   "teks": "Selengkapnya di cekricek.id",
+   "detik": 4.5,
+   "foto": "foto/279004.webp",
+   "fokus": 0.5,
+   "kredit": "Foto: BastianKyle/Wikimedia Commons (CC BY-SA 4.0)"
+  }
+ ]
+}
