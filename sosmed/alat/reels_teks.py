@@ -15,7 +15,7 @@ naskah.json:
       {"jenis": "angka",   "teks": "2", "sub": "nabi yang dikenal Orang Rimba"},
       {"jenis": "penutup", "teks": "Selengkapnya di cekricek.id"}
    ],
-   "musik": "aset/musik/namafile.mp3"   # WAJIB dari Facebook Sound Collection (aturan AFP 16 Okt 2026); kosong = tanpa audio
+   "musik": "aset/musik/namafile.mp3"   # WAJIB dari Facebook Sound Collection (aturan AFP 16 Okt 2026); WAJIB diisi (AFP 17 Okt 2026)
   }
 Durasi tiap adegan dihitung dari panjang teks (3,5–7,5 detik) bila "detik" tidak diisi.
 Teks muncul baris demi baris, selalu terbaca tanpa suara.
@@ -267,15 +267,12 @@ def buat(naskah, keluar):
         t_mulai += a["_dur"]
     # ATURAN AFP 16 Okt 2026 (tidak boleh dilanggar): audio Reels HANYA dari Facebook Sound Collection
     # (facebook.com/sound/collection), berkas di aset/musik/ dengan catatan di aset/musik/LISENSI.txt.
-    # Pad sintetis tidak dipakai lagi; tanpa berkas musik yang sah, Reels dibuat TANPA audio.
+    # KETETAPAN AFP 17 Okt 2026 11.19: SEMUA Reels WAJIB beraudio. Tanpa berkas musik Sound Collection yang sah,
+    # Reels TIDAK dirender (berhenti dengan galat) — slot dikosongkan, bukan diterbitkan sunyi.
     musik = naskah.get("musik")
-    if musik and os.path.exists(musik):
-        audio, af = musik, ["-af", f"afade=t=in:d=1,afade=t=out:st={max(0, total - 2.5)}:d=2.5,volume=0.5"]
-    else:
-        sys.stderr.write("PERINGATAN: tidak ada berkas musik Sound Collection; Reels dirender TANPA audio.\n")
-        audio, af = os.path.join(tmp, "senyap.wav"), []
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
-                        "-t", f"{total:.2f}", audio], check=True)
+    if not (musik and os.path.exists(musik)):
+        sys.exit("GALAT: Reels wajib beraudio (ketetapan AFP 17 Okt 2026). Isi ruas 'musik' dengan berkas di aset/musik/ (Sound Collection).")
+    audio, af = musik, ["-af", f"afade=t=in:d=1,afade=t=out:st={max(0, total - 2.5)}:d=2.5,volume=0.9"]
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", os.path.join(tmp, "%05d.jpg"),
            "-i", audio, *af, "-t", f"{total:.2f}", "-shortest",
            "-vf", "noise=alls=3:allf=t",
