@@ -411,7 +411,7 @@ def buat(naskah, keluar, model):
     sh("ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", os.path.join(kerja, "f", "%05d.jpg"),
        "-i", suara, "-stream_loop", "-1", "-i", musik, "-filter_complex", fc, "-map", "0:v", "-map", "[a]",
        "-t", f"{total:.3f}", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-profile:v", "high", "-crf", "17",
-       "-preset", "slow", "-tune", "film", "-maxrate", "16M", "-bufsize", "32M", "-r", str(FPS),
+       "-preset", "slow", "-tune", "film", "-maxrate", naskah.get("maxrate", "16M"), "-bufsize", naskah.get("bufsize", "32M"), "-r", str(FPS),
        "-c:a", "aac", "-b:a", "192k", "-ar", str(SR), "-movflags", "+faststart", keluar)
     shutil.rmtree(kerja, ignore_errors=True)
     return total, nf

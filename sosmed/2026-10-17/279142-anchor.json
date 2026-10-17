@@ -1,0 +1,126 @@
+{
+ "judul": "Hukum Adat *Rejang* Menghukum Pencuri Pusaka dengan Tiga Kambing",
+ "kicker": "Hukum Adat Rejang · Bengkulu",
+ "musik": "/home/claude/ck-bridge/sosmed/aset/musik/acoustic-whispers.m4a",
+ "musik_volume": 0.15,
+ "jeda": 0.35,
+ "bagian": [
+  {
+   "audio": "/home/claude/fb/rejang/afp/r1.m4a",
+   "teks": "Di Rejang Lebong, Bengkulu, tiga orang mencuri benda pusaka milik museum Badan Musyawarah Adat.",
+   "foto": "/home/claude/fb/rejang/foto/Umeak_Potong_Jang.jpg",
+   "fokus": [
+    0.72,
+    0.5
+   ],
+   "zoom": 1.08,
+   "kredit": "Foto: Ichan.dgmc/Wikimedia Commons (CC BY-SA 4.0)"
+  },
+  {
+   "audio": "/home/claude/fb/rejang/afp/r2.m4a",
+   "teks": "Polisi menitipkan perkara itu kepada badan adat tersebut.",
+   "foto": "/home/claude/fb/rejang/foto/Curup_Rejang_Lebong_Regency.jpg",
+   "fokus": [
+    0.5,
+    0.5
+   ],
+   "zoom": 1.08,
+   "kredit": "Foto: sbamueller/Wikimedia Commons (CC BY-SA 2.0)"
+  },
+  {
+   "audio": "/home/claude/fb/rejang/afp/r3.m4a",
+   "teks": "Hukumannya, tiga pelaku diminta memotong tiga ekor kambing.",
+   "foto": "/home/claude/fb/rejang/foto/Three_goats_in_a_fence.jpg",
+   "fokus": [
+    0.92,
+    0.5
+   ],
+   "zoom": 1.06,
+   "kredit": "Ilustrasi: Jeromi Mikhael/Wikimedia Commons (CC BY-SA 4.0)",
+   "angka": [
+    {
+     "teks": "3",
+     "tempat": "Kambing",
+     "sub": "hukuman adat untuk tiga pencuri pusaka museum",
+     "mulai_kata": 5
+    }
+   ]
+  },
+  {
+   "audio": "/home/claude/fb/rejang/afp/r4.m4a",
+   "potong": [
+    [
+     2.5,
+     12.48
+    ]
+   ],
+   "teks": "Hukuman itu diringankan. Mereka cukup menyerahkan kepala dan hati kambing, lalu membuat pernyataan tidak akan mengulanginya lagi.",
+   "foto": "/home/claude/fb/rejang/foto/Three_goats_in_a_fence.jpg",
+   "fokus": [
+    0.92,
+    0.5
+   ],
+   "zoom": 1.12,
+   "arah": [
+    0.7,
+    0.8
+   ],
+   "kredit": "Ilustrasi: Jeromi Mikhael/Wikimedia Commons (CC BY-SA 4.0)"
+  },
+  {
+   "audio": "/home/claude/fb/rejang/afp/r5.m4a",
+   "teks": "Sejak Januari 2023, Badan Musyawarah Adat Rejang Lebong sudah menyelesaikan sembilan perkara, dari perselingkuhan sampai pencurian. Sanksinya dari denda sampai cambuk.",
+   "foto": "/home/claude/fb/rejang/foto/Curup_Public_Square.jpg",
+   "fokus": [
+    0.45,
+    0.5
+   ],
+   "zoom": 1.08,
+   "kredit": "Foto: MPikli/Wikimedia Commons (CC BY-SA 4.0)",
+   "angka": [
+    {
+     "teks": "9",
+     "tempat": "Perkara",
+     "sub": "diselesaikan BMA Rejang Lebong sejak Januari 2023",
+     "mulai_kata": 10
+    }
+   ]
+  },
+  {
+   "audio": "/home/claude/fb/rejang/afp/r6.m4a",
+   "teks": "Hukum adat Rejang punya nama untuk setiap kesalahan. Samun berarti merampas dengan kekerasan. Upet berarti menyebar fitnah.",
+   "foto": "/home/claude/fb/rejang/foto/Umeak_Potong_Jang.jpg",
+   "fokus": [
+    0.25,
+    0.5
+   ],
+   "zoom": 1.1,
+   "kredit": "Foto: Ichan.dgmc/Wikimedia Commons (CC BY-SA 4.0)"
+  },
+  {
+   "audio": "/home/claude/fb/rejang/afp/r7.m4a",
+   "teks": "Dua pengajar Fakultas Hukum Universitas Bengkulu, Sirman Dahwal dan Zico Junius Fernando, menelitinya. Menurut mereka, adat dan Islam bisa berjalan bersama. Tapi bila bertentangan, hukum Islam didahulukan.",
+   "foto": "/home/claude/fb/rejang/foto/Landscape_of_Rejang_Lebong_trees.jpg",
+   "fokus": [
+    0.5,
+    0.5
+   ],
+   "zoom": 1.08,
+   "kredit": "Foto: Firzafp/Wikimedia Commons (CC BY-SA 4.0)"
+  },
+  {
+   "audio": "/home/claude/fb/rejang/afp/r8.m4a",
+   "teks": "Kisah lengkapnya, baca di cekricek.id.",
+   "penutup": true,
+   "foto": "/home/claude/fb/rejang/foto/Umeak_Potong_Jang.jpg",
+   "fokus": [
+    0.6,
+    0.5
+   ],
+   "zoom": 1.05,
+   "kredit": "Foto: Ichan.dgmc/Wikimedia Commons (CC BY-SA 4.0)"
+  }
+ ],
+ "maxrate": "8000k",
+ "bufsize": "16000k"
+}
