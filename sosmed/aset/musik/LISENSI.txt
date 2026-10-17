@@ -2,3 +2,10 @@ ATURAN AUDIO REELS (AFP, 16 Oktober 2026, 18.41 WIB) — TIDAK BOLEH DILANGGAR
 Semua audio Reels Facebook dan Instagram HANYA dari Facebook Sound Collection: https://www.facebook.com/sound/collection
 Tidak ada sumber lain (Pixabay, YouTube Audio Library, pad sintetis, lagu populer). Tanpa berkas dari folder ini, Reels dirender tanpa audio.
 Tiap berkas dicatat di bawah: nama berkas | judul trek | artis | tanggal unduh | pengunduh.
+acoustic-whispers.m4a | Acoustic Whispers | Jesse Fury | 2026-10-17 | Claude lewat Chrome AFP (Meta Sound Collection, audio_resource_id 2149363745646064)
+dewdrops.m4a | Dewdrops | Jesse Robitaille | 2026-10-17 | Claude lewat Chrome AFP (Meta Sound Collection, 1582842013249721)
+dreams.m4a | Dreams | Vestevent | 2026-10-17 | Claude lewat Chrome AFP (Meta Sound Collection, 2077815632943792)
+fall.m4a | Fall | Jesse Robitaille | 2026-10-17 | Claude lewat Chrome AFP (Meta Sound Collection, 29201083702825493)
+gentle-resolve.m4a | Gentle Resolve | Fellow Travelers | 2026-10-17 | Claude lewat Chrome AFP (Meta Sound Collection, 1353597626989745)
+wandering-minds.m4a | Wandering Minds | ill Think in ink | 2026-10-17 | Claude lewat Chrome AFP (Meta Sound Collection, 1720600585910948)
+Pemakaian: 279106 Manggarai (17 Okt) = gentle-resolve; 279172 Bajo Sampela (17 Okt) = dreams.
