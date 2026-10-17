@@ -1,0 +1,76 @@
+{
+ "rubrik": "Rona",
+ "gaya": "feature",
+ "judul": "Di Desa Boti, Pencuri Ternak *Justru Diberi Ternak*",
+ "foto": "/home/claude/kerja/foto/gat_d.jpg",
+ "fokus": 0.5,
+ "kredit": "Foto: Felix Dance/Wikimedia Commons (CC BY 2.0)",
+ "musik": "/home/claude/ck-bridge/sosmed/aset/musik/dewdrops.m4a",
+ "adegan": [
+  {
+   "jenis": "kail",
+   "teks": "Di Desa Boti, Timor, *pencuri ternak* justru diberi ternak oleh warga sekampung",
+   "detik": 5.5,
+   "foto": "/home/claude/kerja/foto/riv_d.jpg",
+   "fokus": 0.5,
+   "kredit": "Foto: Felix Dance/Wikimedia Commons (CC BY 2.0)"
+  },
+  {
+   "jenis": "fakta",
+   "teks": "Sanksinya bernama *lais palolit*: suatu hal untuk memperbaiki masalah di tengah masyarakat",
+   "detik": 5.5,
+   "foto": "/home/claude/kerja/foto/gat_d.jpg",
+   "fokus": 0.5,
+   "kredit": "Foto: Felix Dance/Wikimedia Commons (CC BY 2.0)"
+  },
+  {
+   "jenis": "fakta",
+   "teks": "Raja Boti, Usif Namah Benu, memandang pencuri sebagai *orang yang terdesak* keadaan",
+   "detik": 5.5,
+   "foto": "/home/claude/kerja/foto/gat_d.jpg",
+   "fokus": 0.3,
+   "kredit": "Foto: Felix Dance/Wikimedia Commons (CC BY 2.0)"
+  },
+  {
+   "jenis": "fakta",
+   "teks": "Bila ternak dicuri, setiap warga mengumpulkan *seekor ternak* kepada raja, lalu raja menyerahkannya kepada pelaku",
+   "detik": 6.5,
+   "foto": "/home/claude/kerja/foto/rumn_d.jpg",
+   "fokus": 0.5,
+   "kredit": "Foto: Novles/Wikimedia Commons (CC BY-SA 4.0)"
+  },
+  {
+   "jenis": "fakta",
+   "teks": "Bila hasil kebun dicuri, saat musim tanam *semua warga* menanami kebun pelaku dengan tanaman yang sama",
+   "detik": 6.5,
+   "foto": "/home/claude/kerja/foto/rumn_d.jpg",
+   "fokus": 0.8,
+   "kredit": "Foto: Novles/Wikimedia Commons (CC BY-SA 4.0)"
+  },
+  {
+   "jenis": "kutipan",
+   "teks": "Wujud dari sanksi adat ini ialah pemberian harta tambahan kepada pelaku berdasarkan apa yang diambilnya",
+   "oleh": "Talan, Asa, dan Resopijani, Universitas Nusa Cendana",
+   "detik": 6,
+   "foto": "/home/claude/kerja/foto/riv_d.jpg",
+   "fokus": 0.7,
+   "kredit": "Foto: Felix Dance/Wikimedia Commons (CC BY 2.0)"
+  },
+  {
+   "jenis": "fakta",
+   "teks": "Perkara ditutup dengan *ramah-tamah bersama*, sehingga tidak tersisa dendam",
+   "detik": 5,
+   "foto": "/home/claude/kerja/foto/gat_d.jpg",
+   "fokus": 0.6,
+   "kredit": "Foto: Felix Dance/Wikimedia Commons (CC BY 2.0)"
+  },
+  {
+   "jenis": "penutup",
+   "teks": "Selengkapnya di cekricek.id",
+   "detik": 4.5,
+   "foto": "/home/claude/kerja/foto/riv_d.jpg",
+   "fokus": 0.5,
+   "kredit": "Foto: Felix Dance/Wikimedia Commons (CC BY 2.0)"
+  }
+ ]
+}
