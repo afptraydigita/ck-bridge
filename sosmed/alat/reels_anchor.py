@@ -256,12 +256,16 @@ def gambar_frame(args):
     nxt_start = bag[idx + 1]["_mulai"] - 0.2 if idx + 1 < len(bag) else total_video
     s0 = b["_mulai"] - 0.2 if idx > 0 else 0.0
     u = (t - s0) / max(0.1, nxt_start - s0)
-    im = kb(latar(b["foto"], b.get("fokus", [0.5, 0.5])), u, b.get("zoom", 1.10), tuple(b.get("arah", [0.5, 0.5])))
+    # KETAJAMAN SETELAH KOMPRESI META (AFP 17 Okt 2026 13.25): Meta menyajikan Reels akun kecil sebagai 720p ~1,6 Mbps.
+    # Latar yang terus bergerak (Ken Burns) memaksa setiap piksel berubah tiap frame sehingga bit habis untuk daun dan
+    # teks ikut buram. Bawaan sekarang: latar DIAM (gerak="diam"); pergantian foto tetap silang halus.
+    diam = naskah.get("gerak", "diam") == "diam"
+    im = kb(latar(b["foto"], b.get("fokus", [0.5, 0.5])), 0.0 if diam else u, b.get("zoom", 1.10), tuple(b.get("arah", [0.5, 0.5])))
     if idx > 0 and t < b["_mulai"] + 0.2:  # silang 0,4 detik
         p = bag[idx - 1]
         ps = p["_mulai"] - 0.2 if idx - 1 > 0 else 0.0
         up = (t - ps) / max(0.1, b["_mulai"] - 0.2 - ps)
-        prev = kb(latar(p["foto"], p.get("fokus", [0.5, 0.5])), min(up, 1.0), p.get("zoom", 1.10), tuple(p.get("arah", [0.5, 0.5])))
+        prev = kb(latar(p["foto"], p.get("fokus", [0.5, 0.5])), 0.0 if diam else min(up, 1.0), p.get("zoom", 1.10), tuple(p.get("arah", [0.5, 0.5])))
         im = Image.blend(prev, im, _ease((t - (b["_mulai"] - 0.2)) / 0.4))
     g, logo = lapis_tetap()
     im = im.convert("RGBA")
@@ -313,8 +317,8 @@ def gambar_frame(args):
 
     # --- teks layar karaoke
     if not b.get("penutup"):
-        ft = K.font("bold", 64)
-        lh = 82
+        ft = K.font("extrabold", 70)
+        lh = 90
         kata, waktu = b["_kata"], b["_waktu"]
         chunks = b.setdefault("_chunks", potong_baris(kata, waktu, d, ft, maxw))
         aktif = None
@@ -327,6 +331,9 @@ def gambar_frame(args):
             ch, cs, ce = aktif
             baris = K.bungkus(d, [(kata[i], False) for i in ch], ft, maxw)
             y = bawah - len(baris) * lh
+            # panel gelap padat di belakang teks: tepi huruf kontras tinggi di atas bidang rata = tetap tajam setelah kompresi
+            d.rounded_rectangle([TEPI - 30, y - 24, W - TEPI + 30, y + len(baris) * lh + 14], 26,
+                                fill=K.MALAM + (205,))
             m = _ease((t - cs) / 0.25)
             k = 0
             spasi = d.textlength(" ", font=ft)
@@ -343,7 +350,6 @@ def gambar_frame(args):
                         warna, al = K.PUTIH, 120
                     al = int(al * m)
                     yy = y + bi * lh + int(14 * (1 - m))
-                    d.text((cx + 3, yy + 4), kt, font=ft, fill=(0, 0, 0, int(al * 0.55)))
                     d.text((cx, yy), kt, font=ft, fill=warna + (al,))
                     cx += w + spasi
     else:
@@ -366,9 +372,10 @@ def gambar_frame(args):
 
     # --- kredit foto: paling bawah, kanan (ketentuan AFP 16 Okt 2026)
     if b.get("kredit"):
-        fc = K.font("regular", 22)
+        fc = K.font("medium", 25)
         tw = d.textlength(b["kredit"], font=fc)
-        d.text((W - 40 - tw, H - 52), b["kredit"], font=fc, fill=K.PUTIH + (190,))
+        d.rounded_rectangle([W - 58 - tw, H - 64, W - 22, H - 22], 21, fill=K.MALAM + (170,))
+        d.text((W - 40 - tw, H - 58), b["kredit"], font=fc, fill=K.PUTIH + (235,))
     im.convert("RGB").save(os.path.join(kerja, "f", f"{fi:05d}.jpg"), quality=97, subsampling=0)
     return fi
 

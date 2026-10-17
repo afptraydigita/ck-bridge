@@ -41,7 +41,7 @@ def _cari(nama):
 
 def font(w, size):
     """Poppins (sans)."""
-    p = _cari(_SANS[w])
+    p = _cari(_SANS[w]) or _cari(_SANS["bold"])  # jangan jatuh ke huruf bawaan PIL (tipis, buram)
     return ImageFont.truetype(p, size) if p else ImageFont.load_default(size)
 
 

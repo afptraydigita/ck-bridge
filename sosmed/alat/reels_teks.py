@@ -104,7 +104,10 @@ def _frame_dasar(t_global, total, naskah, a=None, u_adegan=0.0, sebelumnya=None)
     foto, fokus, kredit = _foto_adegan(a or {}, naskah)
     if foto:
         arah = (0.5, 0.35) if (a or {}).get("jenis") == "kail" else (0.5, 0.5)
-        im = _kb(_latar_foto(foto, fokus), u_adegan, 1.10, arah)
+        # AFP 17 Okt 2026 13.25: Meta menyajikan Reels sebagai 720p ~1,6 Mbps; latar bergerak menghabiskan bit dan teks
+        # ikut buram. Bawaan: latar DIAM ("gerak": "diam"); "gerak": "kb" mengembalikan Ken Burns.
+        diam = naskah.get("gerak", "diam") == "diam"
+        im = _kb(_latar_foto(foto, fokus), 0.0 if diam else u_adegan, 1.10, arah)
     else:
         im = K.ken_burns(_latar_malam(), u_adegan, 1.04)
     if sebelumnya is not None and u_adegan * (a or {}).get("_dur", 1) < 0.5:
@@ -123,8 +126,10 @@ def _frame_dasar(t_global, total, naskah, a=None, u_adegan=0.0, sebelumnya=None)
     d.rectangle([TEPI, AMAN_ATAS - 44, TEPI + (W - 2 * TEPI) * u, AMAN_ATAS - 41], fill=K.ORANYE)
     if foto and kredit:
         # ketentuan AFP 16 Okt 2026: kredit di PALING BAWAH frame, sebelah kanan
-        fk = K.font("light", 19)
-        d.text((W - TEPI - d.textlength(kredit, font=fk), H - 50), kredit, font=fk, fill=(200, 210, 220, 210))
+        fk = K.font("medium", 25)
+        tw = d.textlength(kredit, font=fk)
+        d.rounded_rectangle([W - 58 - tw, H - 64, W - 22, H - 22], 21, fill=K.MALAM + (170,))
+        d.text((W - 40 - tw, H - 58), kredit, font=fk, fill=K.PUTIH + (235,))
     im._latar_bersih = latar_bersih
     return im
 
@@ -190,11 +195,11 @@ def _gambar_adegan(a, u, im, naskah):
     if gaya == "feature":
         besar = 84 if jenis == "kail" else 66
         w, w2 = ("italic", "bolditalic") if jenis == "kutipan" else ("bold", "bolditalic")
-        ft, ft2, b, sz = K.pas(d, toks, maxw, 7, besar, 44, "serif", w, w2)
+        ft, ft2, b, sz = K.pas(d, toks, maxw, 7, besar, 54, "serif", w, w2)
         lh = int(sz * 1.2)
     else:
         besar = 80 if jenis == "kail" else 64
-        ft, ft2, b, sz = K.pas(d, toks, maxw, 7, besar, 42, "sans", "bold", None)
+        ft, ft2, b, sz = K.pas(d, toks, maxw, 7, besar, 52, "sans", "bold", None)
         lh = int(sz * 1.22)
     ekstra = 120 if jenis == "kutipan" else 0
     tinggi = len(b) * lh + ekstra + (60 if a.get("oleh") else 0)
