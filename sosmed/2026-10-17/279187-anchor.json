@@ -1,0 +1,107 @@
+{
+ "judul": "Anak Muda Suku *Duano* di Jambi Malu Memakai Bahasa Leluhurnya",
+ "kicker": "Bahasa Duano · Jambi",
+ "musik": "/home/claude/ck-bridge/sosmed/aset/musik/fall.m4a",
+ "musik_volume": 0.16,
+ "jeda": 0.35,
+ "bagian": [
+  {
+   "audio": "/home/claude/fb/anchor/afp/r4.mp4",
+   "teks": "Di pesisir Jambi, sebuah bahasa sedang menipis. Bahasa Duano, bahasa orang laut di Sabak dan Tungkal.",
+   "foto": "/home/claude/fb/anchor/foto/Sungai_Parit_V_Kuala_Tungkal_03.jpg",
+   "fokus": [
+    0.45,
+    0.5
+   ],
+   "zoom": 1.08,
+   "kredit": "Foto: Thecrazywolf.Netris.3/Wikimedia Commons (CC BY-SA 4.0)"
+  },
+  {
+   "audio": "/home/claude/fb/anchor/afp/r7.m4a",
+   "teks": "Peneliti UIN Sulthan Thaha Saifuddin Jambi menemukan, dari dua ratus kata dasar, 178 di Sabak sudah berubah dari bentuk leluhurnya.",
+   "foto": "/home/claude/fb/anchor/foto/Pematang_Pasir.jpg",
+   "fokus": [
+    0.45,
+    0.5
+   ],
+   "zoom": 1.06,
+   "kredit": "Foto: Yanuar Fasmawi Sa'ban/Wikimedia Commons (CC BY-SA 4.0)",
+   "angka": [
+    {
+     "teks": "178",
+     "tempat": "Sabak",
+     "sub": "dari 200 kata dasar sudah berubah dari bentuk leluhurnya",
+     "mulai_kata": 12
+    }
+   ]
+  },
+  {
+   "audio": "/home/claude/fb/anchor/afp/r5.mp4",
+   "teks": "Di Tungkal, 185.",
+   "foto": "/home/claude/fb/anchor/foto/Sungai_Parit_V_Kuala_Tungkal_01.jpg",
+   "fokus": [
+    0.72,
+    0.5
+   ],
+   "zoom": 1.06,
+   "kredit": "Foto: Thecrazywolf.Netris.3/Wikimedia Commons (CC BY-SA 4.0)",
+   "angka": [
+    {
+     "teks": "185",
+     "tempat": "Tungkal",
+     "sub": "dari 200 kata dasar sudah berubah dari bentuk leluhurnya",
+     "mulai_kata": 2
+    }
+   ]
+  },
+  {
+   "audio": "/home/claude/fb/anchor/afp/r1.mp4",
+   "teks": "Anak mudanya malu memakai bahasa ini, karena dianggap tanda pendidikan dan ekonomi rendah.",
+   "foto": "/home/claude/fb/anchor/foto/Sungai_Parit_V_Kuala_Tungkal_02.jpg",
+   "fokus": [
+    0.8,
+    0.5
+   ],
+   "zoom": 1.1,
+   "kredit": "Foto: Thecrazywolf.Netris.3/Wikimedia Commons (CC BY-SA 4.0)"
+  },
+  {
+   "audio": "/home/claude/fb/anchor/afp/r2.mp4",
+   "teks": "Para peneliti memperkirakan, dalam sepuluh tahun bahasa Duano bisa masuk golongan sangat terancam, terutama di Tungkal.",
+   "foto": "/home/claude/fb/anchor/foto/Ancol_Beach_Kuala_Tungkal_05.jpg",
+   "fokus": [
+    0.35,
+    0.5
+   ],
+   "zoom": 1.1,
+   "kredit": "Foto: Thecrazywolf.Netris.3/Wikimedia Commons (CC BY-SA 4.0)"
+  },
+  {
+   "audio": "/home/claude/fb/anchor/afp/r3.mp4",
+   "teks": "Tapi ada harapan. Sebulan setelah para orang tua diajak berbahasa Duano di pengajian, arisan, dan WhatsApp, remaja Sabak mulai percaya diri memakainya.",
+   "foto": "/home/claude/fb/anchor/foto/Ancol_Beach_Kuala_Tungkal_06.jpg",
+   "fokus": [
+    0.5,
+    0.5
+   ],
+   "zoom": 1.1,
+   "arah": [
+    0.5,
+    0.7
+   ],
+   "kredit": "Foto: Thecrazywolf.Netris.3/Wikimedia Commons (CC BY-SA 4.0)"
+  },
+  {
+   "audio": "/home/claude/fb/anchor/afp/r6.mp4",
+   "teks": "Kisah lengkapnya, baca di cekricek.id.",
+   "penutup": true,
+   "foto": "/home/claude/fb/anchor/foto/Sungai_Parit_V_Kuala_Tungkal_03.jpg",
+   "fokus": [
+    0.6,
+    0.5
+   ],
+   "zoom": 1.05,
+   "kredit": "Foto: Thecrazywolf.Netris.3/Wikimedia Commons (CC BY-SA 4.0)"
+  }
+ ]
+}
