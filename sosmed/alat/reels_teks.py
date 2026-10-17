@@ -32,6 +32,16 @@ from PIL import Image, ImageDraw, ImageChops
 import ckfb as K
 
 W, H, FPS = 1080, 1920, 24
+LATAR_SKALA = 1.25  # latar dibuat lebih besar, lalu dipotong-dikecilkan per frame (tajam)
+
+
+def _kb(im, u, zoom=1.10, arah=(0.5, 0.5)):
+    """Ken Burns tajam: potong kotak pecahan dari latar besar lalu kecilkan ke W x H dengan LANCZOS."""
+    w, h = im.size
+    s = (w / W) / (1 + (zoom - 1) * u)
+    cw, ch = W * s, H * s
+    x0 = (w - cw) * arah[0]; y0 = (h - ch) * arah[1]
+    return im.resize((W, H), Image.LANCZOS, box=(x0, y0, x0 + cw, y0 + ch))
 TEPI = 84
 AMAN_ATAS = 290       # ruang untuk nama Halaman di aplikasi
 AMAN_BAWAH = 540      # ruang untuk caption dan tombol di aplikasi
@@ -55,7 +65,14 @@ _LATAR = {}
 
 def _latar_foto(path, fokus):
     if (path, fokus) not in _LATAR:
-        penuh = K.foto_pas(path, W, H, fokus)
+        # KETAJAMAN (AFP 17 Okt 2026, "reels agak blur"): latar disiapkan 1,25x lebih besar dari bingkai lalu
+        # Ken Burns MEMOTONG dan MENGECILKAN (LANCZOS, kotak pecahan) — tidak pernah memperbesar bingkai jadi.
+        from PIL import ImageFilter
+        sumber = Image.open(path)
+        if min(sumber.size) < 1080:
+            sys.stderr.write(f"PERINGATAN: foto {path} hanya {sumber.size[0]}x{sumber.size[1]} — terlalu kecil untuk Reels tajam; cari versi asli beresolusi tinggi.\n")
+        penuh = K.foto_pas(path, int(W * LATAR_SKALA), int(H * LATAR_SKALA), fokus)
+        penuh = penuh.filter(ImageFilter.UnsharpMask(radius=1.4, percent=45, threshold=2))
         # lebih terang daripada versi lama (0.62): foto harus bisa dinikmati (ketentuan AFP 16 Okt 2026)
         _LATAR[(path, fokus)] = K.vignette(K.hangatkan(penuh, 1.05), 0.35)
     return _LATAR[(path, fokus)]
@@ -87,7 +104,7 @@ def _frame_dasar(t_global, total, naskah, a=None, u_adegan=0.0, sebelumnya=None)
     foto, fokus, kredit = _foto_adegan(a or {}, naskah)
     if foto:
         arah = (0.5, 0.35) if (a or {}).get("jenis") == "kail" else (0.5, 0.5)
-        im = K.ken_burns(_latar_foto(foto, fokus), u_adegan, 1.10, arah)
+        im = _kb(_latar_foto(foto, fokus), u_adegan, 1.10, arah)
     else:
         im = K.ken_burns(_latar_malam(), u_adegan, 1.04)
     if sebelumnya is not None and u_adegan * (a or {}).get("_dur", 1) < 0.5:
@@ -261,7 +278,7 @@ def buat(naskah, keluar):
             im = _frame_dasar(t_mulai + i / FPS, total, naskah, a, ua, sebelumnya)
             terakhir = im._latar_bersih
             _gambar_adegan(a, ua, im, naskah)
-            im.save(os.path.join(tmp, f"{n:05d}.jpg"), quality=92)
+            im.save(os.path.join(tmp, f"{n:05d}.jpg"), quality=97, subsampling=0)
             n += 1
         sebelumnya = terakhir
         t_mulai += a["_dur"]
@@ -275,9 +292,11 @@ def buat(naskah, keluar):
     audio, af = musik, ["-af", f"afade=t=in:d=1,afade=t=out:st={max(0, total - 2.5)}:d=2.5,volume=0.9"]
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", os.path.join(tmp, "%05d.jpg"),
            "-i", audio, *af, "-t", f"{total:.2f}", "-shortest",
-           "-vf", "noise=alls=3:allf=t",
-           "-c:v", "libx264", "-pix_fmt", "yuv420p", "-profile:v", "high", "-crf", "24", "-preset", "slow", "-r", str(FPS),
-           "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", keluar]
+           # KETAJAMAN (AFP 17 Okt 2026): tanpa filter noise, crf 17 + tune film, bitrate cukup untuk kompresi ulang Meta.
+           # JANGAN dikompres ulang sesudahnya (langkah ffmpeg crf 24 lama membuat Reels buram).
+           "-c:v", "libx264", "-pix_fmt", "yuv420p", "-profile:v", "high", "-crf", "17", "-preset", "slow",
+           "-tune", "film", "-maxrate", "16M", "-bufsize", "32M", "-r", str(FPS),
+           "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", keluar]
     subprocess.run(cmd, check=True)
     shutil.rmtree(tmp, ignore_errors=True)
     return keluar, total, n
