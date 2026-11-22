@@ -1,0 +1,15 @@
+<!-- wp:heading -->
+<h2>Apa Itu Hujan Curah (<em>shower</em>)?</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Hujan Curah adalah hujan lebat sekejap yang turun dari awan golakan, tetes atau zarahnya biasanya lebih besar daripada yang terdapat dalam hujan jenis lain;</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Hujan curah turun dan berakhir secara tiba-tiba; umumnya disertai perubahan kelihatan besar dan cepat; dan paling sering perubahan penampakan langit, yaitu perubahan cepat dari berawan hitam (kumulonimbus) menjadi cerah </p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Sumber: <a href="https://cekricek.id/istilah-istilah-dalam-meteorologi-perhubungan/">Istilah-istilah dalam Meteorologi Perhubungan</a></p>
+<!-- /wp:paragraph -->
