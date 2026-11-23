@@ -1,0 +1,11 @@
+<!-- wp:heading -->
+<h2>Pengertian Utilisasi</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Utilisasi adalah tingkat atau derajat pemanfaatan fasilitas dibandingkan dengan kapasitas seperti yang didesainnya (dimaksudkan)</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Sumber: <a href="https://cekricek.id/istilah-istilah-dalam-lingkungan-hidup/">Istilah-istilah dalam Lingkungan Hidup</a></p>
+<!-- /wp:paragraph -->
