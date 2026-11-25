@@ -1,0 +1,45 @@
+<!-- wp:paragraph -->
+<p><strong>Lirik Lagu Batak: Satokkin Di Nipikki - Torgabe Trio</strong></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>songon pandokni akka na tua tua tahe<br>pitu batu martindih ale sada do sitaon andokdok<br>au anak si akkangan mon do da among<br>na matean ama<br>nagabe panggantimo di haha anggi na ibotoki</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>mansai godang do nanaeng huapsahat tu ho<br>ilu nang ias ni roha<br>holan au do na umbotosa</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>dang huparsoada basa basa ni Tuhan<br>na dilehon na tua au<br>alai saonnari namasihol do au among</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Ro maho among satokin pe dinipikki<br>asa hupasahat asa hupasahat<br>na dirohakki<br>haol au among satokin pe dinipikki</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>asa sombu siholohu asa sombu siholhu<br>jala apus ma ilukki</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>mansai godang do nanaeng huapsahat tu ho<br>ilu nang ias ni roha<br>holan au do na umbotosa</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>dang huparsoada basa basa ni Tuhan<br>na dilehon na tua au<br>alai saonnari namasihol do au among</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Ro maho among satokin pe dinipikki<br>asa hupasahat asa hupasahat<br>na dirohakki<br>haol au among satokin pe dinipikki<br>asa sombu siholohu asa sombu siholhu<br>jala apus ma ilukki</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p><strong>Lirik Lagu Batak: Satokkin Di Nipikki - Torgabe Trio</strong></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:embed {"url":"https://www.youtube.com/watch?v=XfEVHLEKkGc","type":"video","providerNameSlug":"youtube","responsive":true,"className":"wp-embed-aspect-16-9 wp-has-aspect-ratio"} -->
+<figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio"><div class="wp-block-embed__wrapper">
+https://www.youtube.com/watch?v=XfEVHLEKkGc
+</div></figure>
+<!-- /wp:embed -->
