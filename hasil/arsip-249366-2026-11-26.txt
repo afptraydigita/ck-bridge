@@ -1,0 +1,45 @@
+<!-- wp:paragraph -->
+<p><strong>Lirik Lagu Batak: Tinggal Kenangan - Rafael Sitorus</strong></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>huddul au sasada au huingot ho oh hasian<br>tung so tagam do rohakki<br>naikkon lao ho sian lambokki<br>maila rohakki laos manetek ilukki</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>tinggal kenangan nama i hasian<br>memoritta si naujui<br>sipata mekkel do au hasian<br>molo huingot sude na manjami</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>olo manetek ilu sian matakki<br>molo huingot sude na burjumi</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>di ingot ho do memoritta hasian<br>rap padua dua tikki i<br>marlojong lojong dipor ni udan i<br>huhaol ho ito manjai gomos</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>hubukka bajukki asa tung las ma daging mi</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>tinggal kenangan nama i hasian<br>memoritta si naujui<br>sipata mekkel do au hasian<br>molo huingot sude na manjami</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>olo manetek ilu sian matakki<br>molo huingot sude na burjumi</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>nang so marokkap hita hasian<br>cintakki sai hot do i tu ho<br>tangiangkon ma au ito hasian<br>asa jumpang au sisongon ho</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:embed {"url":"https://youtu.be/lqh38QLXFXU","providerNameSlug":"youtube","responsive":true} -->
+<figure class="wp-block-embed is-provider-youtube wp-block-embed-youtube"><div class="wp-block-embed__wrapper">
+https://youtu.be/lqh38QLXFXU
+</div></figure>
+<!-- /wp:embed -->
+
+<!-- wp:paragraph -->
+<p><strong>Lirik Lagu Batak: Tinggal Kenangan - Rafael Sitorus</strong></p>
+<!-- /wp:paragraph -->
